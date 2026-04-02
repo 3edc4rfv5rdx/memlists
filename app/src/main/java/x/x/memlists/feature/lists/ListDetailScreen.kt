@@ -14,7 +14,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -47,7 +49,12 @@ fun ListDetailScreen(
         navigationButtonMode = NavigationButtonMode.Back,
         onNavigateBack = onNavigateBack,
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddEntry) {
+            FloatingActionButton(
+                onClick = onAddEntry,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
+            ) {
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = lw("New item")

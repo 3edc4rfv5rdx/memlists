@@ -6,10 +6,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -20,6 +21,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,9 +36,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import x.x.memlists.MemListsApplication
@@ -142,8 +148,8 @@ fun MemoEditorScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedTextField(
                         value = title,
@@ -153,15 +159,19 @@ fun MemoEditorScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 52.dp),
+                            .heightIn(min = 56.dp),
                         label = { Text(lw("Title")) },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = content,
                         onValueChange = { content = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(lw("Content")) }
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 72.dp, max = 72.dp),
+                        label = { Text(lw("Content")) },
+                        minLines = 2,
+                        maxLines = 2
                     )
                     OutlinedTextField(
                         value = tags,
@@ -171,7 +181,7 @@ fun MemoEditorScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 52.dp),
+                            .heightIn(min = 56.dp),
                         label = { Text(lw("Tags")) },
                         trailingIcon = {
                             TagsActions(
@@ -190,7 +200,7 @@ fun MemoEditorScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 52.dp),
+                            .heightIn(min = 56.dp),
                         label = { Text(lw("Date")) },
                         trailingIcon = {
                             Row(
@@ -241,7 +251,7 @@ fun MemoEditorScreen(
                     validationMessage?.let {
                         Text(
                             text = it,
-                            color = palette.clText,
+                            color = Color(0xFFF29238),
                             fontSize = UiTokens.fsSmall
                         )
                     }
@@ -284,18 +294,34 @@ private fun PriorityEditor(
     onIncrease: () -> Unit
 ) {
     val palette = LocalAppThemePalette.current
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         Text(
             text = lw("Priority"),
             color = palette.clText,
             fontSize = UiTokens.fsNormal,
             fontWeight = FontWeight.Bold
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            FilledIconButton(onClick = onDecrease, enabled = priority > 0) {
+            FilledIconButton(
+                onClick = onDecrease,
+                enabled = priority > 0,
+                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                    containerColor = if (priority > 0) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        palette.clMenu
+                    },
+                    contentColor = if (priority > 0) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        palette.clText
+                    },
+                    disabledContainerColor = palette.clMenu.copy(alpha = 0.4f),
+                    disabledContentColor = palette.clText.copy(alpha = 0.4f)
+                )
+            ) {
                 Icon(
                     imageVector = Icons.Default.Remove,
                     contentDescription = lw("Decrease")
@@ -308,20 +334,29 @@ private fun PriorityEditor(
                 Text(
                     text = priority.toString(),
                     modifier = Modifier
-                        .width(56.dp)
-                        .padding(vertical = 10.dp),
+                        .width(36.dp)
+                        .padding(vertical = 6.dp),
                     color = palette.clText,
                     fontSize = UiTokens.fsNormal,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
             }
-            FilledIconButton(onClick = onIncrease, enabled = priority < 3) {
+            FilledIconButton(
+                onClick = onIncrease,
+                enabled = priority < 3,
+                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                    containerColor = palette.clUpBar,
+                    contentColor = palette.clText,
+                    disabledContainerColor = palette.clUpBar.copy(alpha = 0.4f),
+                    disabledContentColor = palette.clText.copy(alpha = 0.4f)
+                )
+            ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = lw("Increase")
                 )
             }
-        }
     }
 }
 
@@ -426,8 +461,16 @@ private fun TagDictionaryDialog(
             } else {
                 LazyColumn {
                     items(tags) { tag ->
-                        TextButton(
-                            onClick = { onSelectTag(tag) }
+                        Button(
+                            onClick = { onSelectTag(tag) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = UiTokens.shapeMedium,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = LocalAppThemePalette.current.clMenu,
+                                contentColor = LocalAppThemePalette.current.clText
+                            )
                         ) {
                             Text(tag)
                         }
@@ -436,7 +479,14 @@ private fun TagDictionaryDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            Button(
+                onClick = onDismiss,
+                shape = UiTokens.shapeMedium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = LocalAppThemePalette.current.clUpBar,
+                    contentColor = LocalAppThemePalette.current.clText
+                )
+            ) {
                 Text(lw("Close"))
             }
         }

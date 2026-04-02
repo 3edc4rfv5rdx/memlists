@@ -19,8 +19,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,6 +62,11 @@ fun MemosHomeScreen(
     onCloseRoot: () -> Unit
 ) {
     val palette = LocalAppThemePalette.current
+    val visibleItems = if (selectedFolder == null) {
+        items.filter { it.reminderType == 1 && !it.monthly && !it.yearly }
+    } else {
+        items
+    }
     var menuExpanded by remember { mutableStateOf(false) }
     ScreenScaffold(
         title = lw(selectedFolder?.titleKey ?: "MemLists"),
@@ -72,7 +79,12 @@ fun MemosHomeScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddMemo) {
+            FloatingActionButton(
+                onClick = onAddMemo,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = lw("New memo")
@@ -171,7 +183,7 @@ fun MemosHomeScreen(
                         }
                     }
                 }
-            } else if (items.isEmpty()) {
+            } else if (visibleItems.isEmpty() && (selectedFolder != null || folders.isEmpty())) {
                 item {
                     MemoEmptyRow(
                         text = lw("No items yet"),
@@ -179,7 +191,7 @@ fun MemosHomeScreen(
                     )
                 }
             } else {
-                items(items, key = { it.id }) { item ->
+                items(visibleItems, key = { it.id }) { item ->
                     MemoItemCard(
                         item = item,
                         lw = lw,

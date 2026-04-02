@@ -344,7 +344,7 @@ class MemListsRepository(
             MemoFolderType.Periods -> selectionParts += "reminder_type = 3"
             MemoFolderType.Monthly -> selectionParts += "reminder_type = 1 AND monthly = 1"
             MemoFolderType.Yearly -> selectionParts += "reminder_type = 1 AND yearly = 1"
-            null -> Unit
+            null -> selectionParts += "reminder_type = 1 AND monthly = 0 AND yearly = 0"
         }
 
         val selection = selectionParts.joinToString(" AND ")

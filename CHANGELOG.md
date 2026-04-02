@@ -3,6 +3,9 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Show only one-time reminders on the main memos screen, keep `Notes` items inside their folder, and hide the empty-root message when records still exist in folders
+- F Tighten and restyle the first item editor: fix text clipping, reduce field heights and spacing, make the minus priority button react to value, and align the priority row compactly
+- F Use theme-derived colors for the main floating action buttons and switch emulator installs to the uninstall-then-install workflow
 - F Tighten the first item editor layout: switch `Title` to a floating label, reduce vertical spacing, format the date field as `YYYY-MM-DD`, move the reminder checkbox before its label, and replace text `+/-` controls with round icon buttons
 - N Add the first tag dictionary for the item editor: the `#` button now opens a dialog built from existing item tags and inserts the selected tag into the tags field
 - F Replace the memo-editor top app bar text action with a save icon button and remove the visible `memo` wording from that action

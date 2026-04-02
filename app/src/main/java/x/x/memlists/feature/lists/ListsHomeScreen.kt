@@ -18,7 +18,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,14 +57,23 @@ fun ListsHomeScreen(
         floatingActionButton = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (currentFolderId == null) {
-                    SmallFloatingActionButton(onClick = onAddFolder) {
+                    SmallFloatingActionButton(
+                        onClick = onAddFolder,
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onBackground
+                    ) {
                         Icon(
                             imageVector = Icons.Default.CreateNewFolder,
                             contentDescription = lw("New folder")
                         )
                     }
                 }
-                FloatingActionButton(onClick = onAddList) {
+                FloatingActionButton(
+                    onClick = onAddList,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = lw("New list")

@@ -41,6 +41,10 @@
 - Added the first tag dictionary dialog fed by existing tags in the items table and wired it to the `#` button in the tags field.
 - Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the latest item editor changes.
 - Installed the rebuilt debug APK to the emulator and confirmed that the app process is alive after launch.
+- Restricted the main memos root list to one-time reminders and kept `Notes` content inside the `Notes` folder.
+- Removed the misleading empty-root message when records still exist in memo folders.
+- Updated the item editor again: reduced field heights and spacing, fixed clipped text in fields, and made the minus priority button react to the current value.
+- Switched install verification to the uninstall-then-install workflow and confirmed the rebuilt APK launches after a clean reinstall.
 
 ## Next
 - Continue replacing provisional UI with spec-driven layouts and behavior.
