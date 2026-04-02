@@ -39,6 +39,7 @@ import x.x.memlists.core.ui.UiTokens
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Save
 
 @Composable
 fun MemoEditorScreen(
@@ -59,7 +60,7 @@ fun MemoEditorScreen(
     var canSave by remember { mutableStateOf(true) }
     var validationMessage by remember { mutableStateOf<String?>(null) }
 
-    fun saveMemo() {
+    fun saveItem() {
         val trimmedTitle = title.trim()
         if (trimmedTitle.isEmpty()) {
             validationMessage = lw("Title is required")
@@ -93,14 +94,14 @@ fun MemoEditorScreen(
         navigationButtonMode = NavigationButtonMode.Back,
         onNavigateBack = onNavigateBack,
         actions = {
-            TextButton(
-                onClick = { saveMemo() },
+            IconButton(
+                onClick = { saveItem() },
                 enabled = canSave
             ) {
-                Text(
-                    text = lw("Save memo"),
-                    color = palette.clText,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    imageVector = Icons.Default.Save,
+                    contentDescription = lw("Save"),
+                    tint = palette.clText
                 )
             }
         }

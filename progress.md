@@ -35,6 +35,8 @@
 - Reworked the first memo editor closer to the spec with top app bar save, date picker and clear button, tags controls, priority stepper, and the first reminder toggle.
 - Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the memo editor changes.
 - Installed the rebuilt debug APK to the emulator and confirmed that `MainActivity` is displayed.
+- Replaced the top app bar text save action with a save icon button and removed the visible `memo` wording from that action.
+- Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the save action change.
 
 ## Next
 - Continue replacing provisional UI with spec-driven layouts and behavior.
