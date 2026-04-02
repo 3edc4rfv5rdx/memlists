@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Rework the first memo editor toward the spec: move save to the top app bar, rename the screen to `NewItem`, add date picker plus clear button, add tags `#` plus clear controls, switch priority to `(-) N (+)`, and add the first reminder checkbox row
 - F Align welcome and home navigation closer to the spec: remove the extra welcome subtitle, switch the main memos app bar to close or back plus menu, and keep `Lists` as the first row
 - E Fix the shared `ScreenScaffold` migration by updating all remaining screens to the new navigation button API and restoring a clean debug build
 - F Remove extra improvised cards from the Lists home root and keep the screen focused on folders and lists

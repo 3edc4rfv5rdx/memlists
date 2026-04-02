@@ -32,6 +32,9 @@
 - Reworked the welcome and main memos navigation closer to the specification and removed the extra hero-style shortcuts.
 - Updated all screens to the new `ScreenScaffold` navigation API and confirmed a clean rebuild.
 - Installed the rebuilt debug APK to the emulator and confirmed that `MainActivity` is resumed.
+- Reworked the first memo editor closer to the spec with top app bar save, date picker and clear button, tags controls, priority stepper, and the first reminder toggle.
+- Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the memo editor changes.
+- Installed the rebuilt debug APK to the emulator and confirmed that `MainActivity` is displayed.
 
 ## Next
 - Continue replacing provisional UI with spec-driven layouts and behavior.
