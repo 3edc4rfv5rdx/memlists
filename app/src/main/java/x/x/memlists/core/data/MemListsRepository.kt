@@ -134,6 +134,42 @@ class MemListsRepository(
         )
     }
 
+    suspend fun insertMemo(
+        title: String,
+        content: String?,
+        tags: String?,
+        priority: Int,
+        date: Int?
+    ): Long = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            put("title", title)
+            put("content", content)
+            put("tags", tags)
+            put("priority", priority)
+            put("created", todayAsInt())
+            put("hidden", 0)
+            put("reminder_type", 0)
+            put("active", 1)
+            if (date == null) {
+                putNull("date")
+            } else {
+                put("date", date)
+            }
+            putNull("time")
+            putNull("times")
+            putNull("date_to")
+            putNull("days_mask")
+            putNull("sound")
+            put("fullscreen", 0)
+            put("loop_sound", 1)
+            put("yearly", 0)
+            put("monthly", 0)
+            put("remove", 0)
+            putNull("period_done_until")
+        }
+        databaseHelper.writableDatabase.insertOrThrow("items", null, values)
+    }
+
     private fun android.database.sqlite.SQLiteDatabase.putSetting(key: String, value: String) {
         val contentValues = ContentValues().apply {
             put("key", key)

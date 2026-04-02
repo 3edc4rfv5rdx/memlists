@@ -48,10 +48,10 @@ echo "Build:   $BUILD"
 APK_PREFIX="${PROJECT}-${VERSION}+${BUILD}-release"
 
 # ------------------------------------------------------------
-# Build changelog from changelog.md
+# Build changelog from CHANGELOG.md
 # Collect all sections between current tag and previous tag
 # ------------------------------------------------------------
-echo "=== Building changelog from changelog.md ==="
+echo "=== Building changelog from CHANGELOG.md ==="
 
 PREV_TAG=$(git tag --list 'v*' | sort -V | grep -B1 "^${TAG}$" | head -1)
 if [[ "$PREV_TAG" == "$TAG" ]]; then
@@ -76,7 +76,7 @@ awk -v cur="## ${VERSION}+${BUILD}" -v stop="$STOP_HEADER" '
         print ""; print $0; next
     }
     capture { print }
-' changelog.md > "$CHANGELOG_FILE"
+' CHANGELOG.md > "$CHANGELOG_FILE"
 
 echo "Generated changelog:"
 echo "--------------------------------------------------"

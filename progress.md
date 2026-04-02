@@ -7,7 +7,7 @@
 - Renamed the working branch to `main`.
 - Added the Gradle wrapper and base Android project files.
 - Configured Kotlin, Compose, `minSdk 28`, `targetSdk 36`, APK signing lookup, and version loading from `build_number.txt`.
-- Added `changelog.md` and the first unreleased infrastructure entry.
+- Added `CHANGELOG.md` and the first unreleased infrastructure entry.
 - Added the Android manifest, launcher assets, and backup extraction placeholders.
 - Added JSON assets for localization and theme definitions.
 - Implemented the shared SQLite schema helper for the six required tables.
@@ -26,8 +26,11 @@
 - Implemented the first data-backed Lists home flow with SQLite loading, folder navigation, and list state indicators.
 - Removed leftover shell scripts from the previous scheme and kept only the `xcalc`-style set.
 - Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the Lists changes.
+- Renamed the changelog file to `CHANGELOG.md` and aligned script references.
+- Implemented the first memo creation flow with a dedicated editor screen and SQLite insert.
+- Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the memo editor changes.
 
 ## Next
 - Start the Memos module data flow and filtering skeleton.
-- Add memo creation and editing flow.
+- Extend memo editing beyond the first create flow and add reminder controls.
 - Start the Lists item screen and add or edit item flow.

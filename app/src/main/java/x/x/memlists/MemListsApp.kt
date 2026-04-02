@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -15,6 +17,7 @@ import x.x.memlists.core.ui.LoadingScreen
 import x.x.memlists.feature.lists.ListsHomeScreen
 import x.x.memlists.feature.lists.ListsViewModel
 import x.x.memlists.feature.memos.MemosHomeScreen
+import x.x.memlists.feature.memos.MemoEditorScreen
 import x.x.memlists.feature.memos.MemosViewModel
 import x.x.memlists.feature.settings.SettingsScreen
 import x.x.memlists.feature.welcome.WelcomeScreen
@@ -24,6 +27,7 @@ private object Routes {
     const val Memos = "memos"
     const val Lists = "lists"
     const val Settings = "settings"
+    const val MemoNew = "memo_new"
 }
 
 @Composable
@@ -59,9 +63,21 @@ fun MemListsApp() {
             composable(Routes.Memos) {
                 val memosViewModel: MemosViewModel = viewModel()
                 val memosUiState by memosViewModel.uiState.collectAsState()
+                val refreshHandle = navController.currentBackStackEntry?.savedStateHandle
+                val shouldRefresh by refreshHandle
+                    ?.getStateFlow("memos_refresh", false)
+                    ?.collectAsState()
+                    ?: androidx.compose.runtime.remember { mutableStateOf(false) }
 
                 LaunchedEffect(uiState.settings.newestFirst) {
                     memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                }
+
+                LaunchedEffect(shouldRefresh) {
+                    if (shouldRefresh) {
+                        memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                        refreshHandle?.set("memos_refresh", false)
+                    }
                 }
 
                 MemosHomeScreen(
@@ -72,11 +88,24 @@ fun MemListsApp() {
                     lw = lw,
                     onOpenLists = { navController.navigate(Routes.Lists) },
                     onOpenSettings = { navController.navigate(Routes.Settings) },
+                    onAddMemo = { navController.navigate(Routes.MemoNew) },
                     onOpenFolder = { folder ->
                         memosViewModel.openFolder(folder, newestFirst = uiState.settings.newestFirst)
                     },
                     onBackFromFolder = {
                         memosViewModel.leaveFolder(newestFirst = uiState.settings.newestFirst)
+                    }
+                )
+            }
+            composable(Routes.MemoNew) {
+                val application = LocalContext.current.applicationContext as MemListsApplication
+                MemoEditorScreen(
+                    application = application,
+                    lw = lw,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaved = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("memos_refresh", true)
+                        navController.popBackStack()
                     }
                 )
             }

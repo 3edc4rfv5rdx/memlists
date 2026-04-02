@@ -46,11 +46,13 @@ fun ScreenScaffold(
     title: String,
     canNavigateBack: Boolean,
     onNavigateBack: () -> Unit,
+    floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
     Scaffold(
         containerColor = palette.clBgrnd,
+        floatingActionButton = floatingActionButton,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {

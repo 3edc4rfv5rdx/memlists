@@ -9,11 +9,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.StickyNote2
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -42,6 +44,7 @@ fun MemosHomeScreen(
     lw: (String) -> String,
     onOpenLists: () -> Unit,
     onOpenSettings: () -> Unit,
+    onAddMemo: () -> Unit,
     onOpenFolder: (MemoFolderType) -> Unit,
     onBackFromFolder: () -> Unit
 ) {
@@ -49,7 +52,15 @@ fun MemosHomeScreen(
     ScreenScaffold(
         title = lw(selectedFolder?.titleKey ?: "MemLists"),
         canNavigateBack = selectedFolder != null,
-        onNavigateBack = onBackFromFolder
+        onNavigateBack = onBackFromFolder,
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddMemo) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = lw("New memo")
+                )
+            }
+        }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
