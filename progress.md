@@ -19,8 +19,12 @@
 - Updated the Gradle wrapper to `9.3.1`.
 - Ran the first local build and fixed the initial compile and resource issues.
 - Confirmed that `./gradlew :app:assembleDebug` completes successfully.
+- Replaced the temporary shell scripts with the `xcalc` workflow and added the full script set.
+- Updated the install and release-upload scripts for MemLists paths and outputs.
+- Implemented the first data-backed Memos home flow with SQLite loading, sorting, folder counts, and folder switching.
+- Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the Memos changes.
 
 ## Next
-- Refine and extend the copied build shell scripts for MemLists-specific release flow.
-- Replace the placeholder memos and lists screens with real data-backed rendering.
+- Replace the placeholder Lists home screen with real data-backed rendering.
 - Start the Memos module data flow and filtering skeleton.
+- Add memo creation and editing flow.

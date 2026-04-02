@@ -14,6 +14,7 @@ import x.x.memlists.core.theme.MemListsTheme
 import x.x.memlists.core.ui.LoadingScreen
 import x.x.memlists.feature.lists.ListsHomeScreen
 import x.x.memlists.feature.memos.MemosHomeScreen
+import x.x.memlists.feature.memos.MemosViewModel
 import x.x.memlists.feature.settings.SettingsScreen
 import x.x.memlists.feature.welcome.WelcomeScreen
 
@@ -55,10 +56,27 @@ fun MemListsApp() {
                 )
             }
             composable(Routes.Memos) {
+                val memosViewModel: MemosViewModel = viewModel()
+                val memosUiState by memosViewModel.uiState.collectAsState()
+
+                LaunchedEffect(uiState.settings.newestFirst) {
+                    memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                }
+
                 MemosHomeScreen(
+                    selectedFolder = memosUiState.selectedFolder,
+                    isLoading = memosUiState.isLoading,
+                    items = memosUiState.items,
+                    folders = memosUiState.folders,
                     lw = lw,
                     onOpenLists = { navController.navigate(Routes.Lists) },
-                    onOpenSettings = { navController.navigate(Routes.Settings) }
+                    onOpenSettings = { navController.navigate(Routes.Settings) },
+                    onOpenFolder = { folder ->
+                        memosViewModel.openFolder(folder, newestFirst = uiState.settings.newestFirst)
+                    },
+                    onBackFromFolder = {
+                        memosViewModel.leaveFolder(newestFirst = uiState.settings.newestFirst)
+                    }
                 )
             }
             composable(Routes.Lists) {

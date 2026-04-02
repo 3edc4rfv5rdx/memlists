@@ -8,5 +8,4 @@ if [ -z "$apk" ]; then
 fi
 
 echo ">>> Installing: $(basename "$apk")"
-adb -s RFCW91FV79X install -r "$apk"
-sleep 2
+adb -s emulator-5554 install -r "$apk"

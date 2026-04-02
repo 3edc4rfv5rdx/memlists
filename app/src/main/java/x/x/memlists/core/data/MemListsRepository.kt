@@ -1,6 +1,7 @@
 package x.x.memlists.core.data
 
 import android.content.ContentValues
+import android.database.Cursor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -63,6 +64,16 @@ class MemListsRepository(
         }
     }
 
+    suspend fun loadMemosHome(
+        folder: MemoFolderType?,
+        newestFirst: Boolean,
+        hiddenMode: Boolean = false
+    ): MemosHomeData = withContext(Dispatchers.IO) {
+        val items = loadMemoItems(folder = folder, hiddenMode = hiddenMode, newestFirst = newestFirst)
+        val folders = if (folder == null) loadMemoFolders(hiddenMode = hiddenMode) else emptyList()
+        MemosHomeData(items = items, folders = folders)
+    }
+
     private fun android.database.sqlite.SQLiteDatabase.putSetting(key: String, value: String) {
         val contentValues = ContentValues().apply {
             put("key", key)
@@ -88,6 +99,161 @@ class MemListsRepository(
         }
     }
 
+    private fun loadMemoItems(
+        folder: MemoFolderType?,
+        hiddenMode: Boolean,
+        newestFirst: Boolean
+    ): List<MemoItemSummary> {
+        val selectionParts = mutableListOf<String>()
+        val selectionArgs = mutableListOf<String>()
+
+        selectionParts += "hidden = ?"
+        selectionArgs += if (hiddenMode) "1" else "0"
+
+        when (folder) {
+            MemoFolderType.Notes -> selectionParts += "reminder_type = 0"
+            MemoFolderType.Daily -> selectionParts += "reminder_type = 2"
+            MemoFolderType.Periods -> selectionParts += "reminder_type = 3"
+            MemoFolderType.Monthly -> selectionParts += "reminder_type = 1 AND monthly = 1"
+            MemoFolderType.Yearly -> selectionParts += "reminder_type = 1 AND yearly = 1"
+            null -> Unit
+        }
+
+        val selection = selectionParts.joinToString(" AND ")
+        val rows = mutableListOf<MemoItemSummary>()
+        databaseHelper.readableDatabase.query(
+            "items",
+            arrayOf(
+                "id",
+                "title",
+                "content",
+                "tags",
+                "priority",
+                "created",
+                "hidden",
+                "reminder_type",
+                "active",
+                "date",
+                "time",
+                "times",
+                "date_to",
+                "days_mask",
+                "yearly",
+                "monthly"
+            ),
+            selection,
+            selectionArgs.toTypedArray(),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += cursor.toMemoItemSummary(photoCount = loadPhotoCount(cursor.getLong(0)))
+            }
+        }
+
+        return rows.sortedWith(memoComparator(folder = folder, newestFirst = newestFirst))
+    }
+
+    private fun loadMemoFolders(hiddenMode: Boolean): List<MemoFolderSummary> {
+        val hiddenValue = if (hiddenMode) 1 else 0
+        val specs = listOf(
+            MemoFolderType.Notes to "reminder_type = 0",
+            MemoFolderType.Daily to "reminder_type = 2",
+            MemoFolderType.Periods to "reminder_type = 3",
+            MemoFolderType.Monthly to "reminder_type = 1 AND monthly = 1",
+            MemoFolderType.Yearly to "reminder_type = 1 AND yearly = 1"
+        )
+
+        return specs.mapNotNull { (type, expression) ->
+            val count = databaseHelper.readableDatabase.compileStatement(
+                "SELECT COUNT(*) FROM items WHERE hidden = ? AND $expression"
+            ).apply {
+                bindLong(1, hiddenValue.toLong())
+            }.simpleQueryForLong().toInt()
+
+            if (count > 0) MemoFolderSummary(type = type, count = count) else null
+        }
+    }
+
+    private fun loadPhotoCount(itemId: Long): Int {
+        return databaseHelper.readableDatabase.compileStatement(
+            "SELECT COUNT(*) FROM photos WHERE owner_type = 'memo' AND owner_id = ?"
+        ).apply {
+            bindLong(1, itemId)
+        }.simpleQueryForLong().toInt()
+    }
+
+    private fun Cursor.toMemoItemSummary(photoCount: Int): MemoItemSummary {
+        return MemoItemSummary(
+            id = getLong(0),
+            title = getString(1),
+            content = getStringOrNull(2),
+            tags = getStringOrNull(3),
+            priority = getInt(4),
+            created = getInt(5),
+            hidden = getInt(6) == 1,
+            reminderType = getInt(7),
+            active = getInt(8) == 1,
+            date = getIntOrNull(9),
+            time = getIntOrNull(10),
+            timesJson = getStringOrNull(11),
+            dateTo = getIntOrNull(12),
+            daysMask = getIntOrNull(13),
+            yearly = getInt(14) == 1,
+            monthly = getInt(15) == 1,
+            photoCount = photoCount
+        )
+    }
+
+    private fun memoComparator(
+        folder: MemoFolderType?,
+        newestFirst: Boolean
+    ): Comparator<MemoItemSummary> {
+        return when (folder) {
+            MemoFolderType.Yearly,
+            MemoFolderType.Monthly,
+            MemoFolderType.Periods -> compareBy<MemoItemSummary>({ it.date ?: Int.MAX_VALUE }, { it.time ?: Int.MAX_VALUE })
+            MemoFolderType.Daily -> compareBy({ firstDailyTime(it.timesJson) ?: "99:99" }, { it.title.lowercase() })
+            MemoFolderType.Notes -> {
+                if (newestFirst) compareByDescending<MemoItemSummary> { it.created } else compareBy { it.created }
+            }
+            null -> {
+                val today = todayAsInt()
+                Comparator { left, right ->
+                    compareValues(mainSortBucket(left, today), mainSortBucket(right, today))
+                        .takeIf { it != 0 }
+                        ?: compareValues(right.priority, left.priority).takeIf { it != 0 }
+                        ?: compareDate(left.date, right.date, newestFirst).takeIf { it != 0 }
+                        ?: compareDate(left.created, right.created, newestFirst)
+                }
+            }
+        }
+    }
+
+    private fun mainSortBucket(item: MemoItemSummary, today: Int): Int {
+        val date = item.date ?: return 2
+        return when {
+            date == today -> 0
+            date > today -> 1
+            else -> 2
+        }
+    }
+
+    private fun compareDate(left: Int?, right: Int?, newestFirst: Boolean): Int {
+        val leftValue = left ?: if (newestFirst) Int.MIN_VALUE else Int.MAX_VALUE
+        val rightValue = right ?: if (newestFirst) Int.MIN_VALUE else Int.MAX_VALUE
+        return if (newestFirst) compareValues(rightValue, leftValue) else compareValues(leftValue, rightValue)
+    }
+
+    private fun Cursor.getStringOrNull(index: Int): String? {
+        return if (isNull(index)) null else getString(index)
+    }
+
+    private fun Cursor.getIntOrNull(index: Int): Int? {
+        return if (isNull(index)) null else getInt(index)
+    }
+
     companion object {
         private const val KEY_LANGUAGE = "Language"
         private const val KEY_THEME = "Color theme"
@@ -101,4 +267,3 @@ class MemListsRepository(
         private const val KEY_LARGE_FONT_WAKELOCK = "large_font_wakelock"
     }
 }
-
