@@ -3,6 +3,8 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Tighten the first item editor layout: switch `Title` to a floating label, reduce vertical spacing, format the date field as `YYYY-MM-DD`, move the reminder checkbox before its label, and replace text `+/-` controls with round icon buttons
+- N Add the first tag dictionary for the item editor: the `#` button now opens a dialog built from existing item tags and inserts the selected tag into the tags field
 - F Replace the memo-editor top app bar text action with a save icon button and remove the visible `memo` wording from that action
 - F Rework the first memo editor toward the spec: move save to the top app bar, rename the screen to `NewItem`, add date picker plus clear button, add tags `#` plus clear controls, switch priority to `(-) N (+)`, and add the first reminder checkbox row
 - F Align welcome and home navigation closer to the spec: remove the extra welcome subtitle, switch the main memos app bar to close or back plus menu, and keep `Lists` as the first row

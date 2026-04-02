@@ -170,6 +170,28 @@ class MemListsRepository(
         databaseHelper.writableDatabase.insertOrThrow("items", null, values)
     }
 
+    suspend fun loadKnownTags(): List<String> = withContext(Dispatchers.IO) {
+        val tags = linkedSetOf<String>()
+        databaseHelper.readableDatabase.query(
+            "items",
+            arrayOf("tags"),
+            "tags IS NOT NULL AND tags != ''",
+            null,
+            null,
+            null,
+            "tags COLLATE NOCASE ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                cursor.getStringOrNull(0)
+                    ?.split(",")
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotBlank() }
+                    ?.forEach { tags += it }
+            }
+        }
+        tags.toList().sortedBy { it.lowercase() }
+    }
+
     suspend fun insertList(
         name: String,
         comment: String?,

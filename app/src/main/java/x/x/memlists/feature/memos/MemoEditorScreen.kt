@@ -6,20 +6,27 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,6 +47,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 
 @Composable
 fun MemoEditorScreen(
@@ -59,6 +68,13 @@ fun MemoEditorScreen(
     var remindersEnabled by remember { mutableStateOf(false) }
     var canSave by remember { mutableStateOf(true) }
     var validationMessage by remember { mutableStateOf<String?>(null) }
+    var tagDialogVisible by remember { mutableStateOf(false) }
+    val knownTags = remember { mutableStateListOf<String>() }
+
+    LaunchedEffect(Unit) {
+        knownTags.clear()
+        knownTags.addAll(application.repository.loadKnownTags())
+    }
 
     fun saveItem() {
         val trimmedTitle = title.trim()
@@ -68,7 +84,7 @@ fun MemoEditorScreen(
             val parsedDate = if (dateText.isBlank()) {
                 null
             } else {
-                dateText.toIntOrNull()
+                dateText.toDbDateInt()
             }
             if (dateText.isNotBlank() && parsedDate == null) {
                 validationMessage = lw("Date format is invalid")
@@ -87,6 +103,18 @@ fun MemoEditorScreen(
                 }
             }
         }
+    }
+
+    if (tagDialogVisible) {
+        TagDictionaryDialog(
+            tags = knownTags,
+            lw = lw,
+            onDismiss = { tagDialogVisible = false },
+            onSelectTag = { selectedTag ->
+                tags = appendTag(tags, selectedTag)
+                tagDialogVisible = false
+            }
+        )
     }
 
     ScreenScaffold(
@@ -114,22 +142,19 @@ fun MemoEditorScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = lw("Title"),
-                        color = palette.clText,
-                        fontSize = UiTokens.fsNormal,
-                        fontWeight = FontWeight.Bold
-                    )
                     OutlinedTextField(
                         value = title,
                         onValueChange = {
                             title = it
                             validationMessage = null
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp),
+                        label = { Text(lw("Title")) },
                         singleLine = true
                     )
                     OutlinedTextField(
@@ -140,20 +165,19 @@ fun MemoEditorScreen(
                     )
                     OutlinedTextField(
                         value = tags,
-                        onValueChange = { tags = it },
-                        modifier = Modifier.fillMaxWidth(),
+                        onValueChange = {
+                            tags = it
+                            validationMessage = null
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp),
                         label = { Text(lw("Tags")) },
                         trailingIcon = {
                             TagsActions(
                                 tags = tags,
                                 lw = lw,
-                                onAddHash = {
-                                    tags = when {
-                                        tags.isBlank() -> "#"
-                                        tags.endsWith("#") -> tags
-                                        else -> "$tags #"
-                                    }
-                                },
+                                onOpenDictionary = { tagDialogVisible = true },
                                 onClear = { tags = "" }
                             )
                         }
@@ -161,9 +185,12 @@ fun MemoEditorScreen(
                     OutlinedTextField(
                         value = dateText,
                         onValueChange = {
-                            dateText = it.filter(Char::isDigit).take(8)
+                            dateText = normalizeDateInput(it)
+                            validationMessage = null
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp),
                         label = { Text(lw("Date")) },
                         trailingIcon = {
                             Row(
@@ -228,13 +255,13 @@ fun MemoEditorScreen(
 private fun TagsActions(
     tags: String,
     lw: (String) -> String,
-    onAddHash: () -> Unit,
+    onOpenDictionary: () -> Unit,
     onClear: () -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TextButton(onClick = onAddHash) {
+        TextButton(onClick = onOpenDictionary) {
             Text("#")
         }
         IconButton(
@@ -268,8 +295,11 @@ private fun PriorityEditor(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            TextButton(onClick = onDecrease, enabled = priority > 0) {
-                Text("(-)")
+            FilledIconButton(onClick = onDecrease, enabled = priority > 0) {
+                Icon(
+                    imageVector = Icons.Default.Remove,
+                    contentDescription = lw("Decrease")
+                )
             }
             Card(
                 colors = CardDefaults.cardColors(containerColor = palette.clBgrnd),
@@ -285,8 +315,11 @@ private fun PriorityEditor(
                     fontWeight = FontWeight.Bold
                 )
             }
-            TextButton(onClick = onIncrease, enabled = priority < 3) {
-                Text("(+)")
+            FilledIconButton(onClick = onIncrease, enabled = priority < 3) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = lw("Increase")
+                )
             }
         }
     }
@@ -308,17 +341,17 @@ private fun ReminderToggle(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
             Text(
                 text = lw("Reminder"),
                 color = palette.clText,
                 fontSize = UiTokens.fsNormal,
                 fontWeight = FontWeight.Bold
-            )
-            Checkbox(
-                checked = checked,
-                onCheckedChange = onCheckedChange
             )
         }
     }
@@ -326,10 +359,11 @@ private fun ReminderToggle(
 
 private fun parseDateOrToday(dateText: String): Calendar {
     val calendar = Calendar.getInstance()
-    if (dateText.length == 8) {
-        val year = dateText.substring(0, 4).toIntOrNull()
-        val month = dateText.substring(4, 6).toIntOrNull()
-        val day = dateText.substring(6, 8).toIntOrNull()
+    val digits = dateText.filter(Char::isDigit)
+    if (digits.length == 8) {
+        val year = digits.substring(0, 4).toIntOrNull()
+        val month = digits.substring(4, 6).toIntOrNull()
+        val day = digits.substring(6, 8).toIntOrNull()
         if (year != null && month != null && day != null) {
             calendar.set(year, month - 1, day)
         }
@@ -338,5 +372,73 @@ private fun parseDateOrToday(dateText: String): Calendar {
 }
 
 private fun formatPickerDate(year: Int, month: Int, dayOfMonth: Int): String {
-    return "%04d%02d%02d".format(year, month + 1, dayOfMonth)
+    return "%04d-%02d-%02d".format(year, month + 1, dayOfMonth)
+}
+
+private fun normalizeDateInput(text: String): String {
+    val digits = text.filter(Char::isDigit).take(8)
+    return buildString {
+        digits.forEachIndexed { index, char ->
+            append(char)
+            if ((index == 3 || index == 5) && index != digits.lastIndex) {
+                append('-')
+            }
+        }
+    }
+}
+
+private fun String.toDbDateInt(): Int? {
+    val digits = filter(Char::isDigit)
+    return if (digits.length == 8) digits.toIntOrNull() else null
+}
+
+private fun appendTag(currentTags: String, tag: String): String {
+    val cleanTag = tag.trim()
+    if (cleanTag.isBlank()) {
+        return currentTags
+    }
+    val current = currentTags
+        .split(",")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .toMutableList()
+    if (current.none { it.equals(cleanTag, ignoreCase = true) }) {
+        current += cleanTag
+    }
+    return current.joinToString(", ")
+}
+
+@Composable
+private fun TagDictionaryDialog(
+    tags: List<String>,
+    lw: (String) -> String,
+    onDismiss: () -> Unit,
+    onSelectTag: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(lw("Tag dictionary"))
+        },
+        text = {
+            if (tags.isEmpty()) {
+                Text(lw("No tags yet"))
+            } else {
+                LazyColumn {
+                    items(tags) { tag ->
+                        TextButton(
+                            onClick = { onSelectTag(tag) }
+                        ) {
+                            Text(tag)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(lw("Close"))
+            }
+        }
+    )
 }

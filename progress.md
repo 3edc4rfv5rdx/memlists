@@ -37,6 +37,10 @@
 - Installed the rebuilt debug APK to the emulator and confirmed that `MainActivity` is displayed.
 - Replaced the top app bar text save action with a save icon button and removed the visible `memo` wording from that action.
 - Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the save action change.
+- Tightened the `NewItem` editor layout with floating `Title`, `YYYY-MM-DD` date format, round priority buttons, and the reminder checkbox placed before its label.
+- Added the first tag dictionary dialog fed by existing tags in the items table and wired it to the `#` button in the tags field.
+- Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the latest item editor changes.
+- Installed the rebuilt debug APK to the emulator and confirmed that the app process is alive after launch.
 
 ## Next
 - Continue replacing provisional UI with spec-driven layouts and behavior.
