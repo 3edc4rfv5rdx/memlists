@@ -3,6 +3,8 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N Add the first data-backed Lists home flow: SQLite loading, folder navigation, lock/completion indicators, and root or folder rendering
+- F Remove leftover shell scripts from the old scheme and keep only the `xcalc`-style set
 - N Add the first data-backed Memos home flow: SQLite loading, folder counts, folder switching, and memo card rendering
 - I Switch the shell scripts to the `xcalc` workflow: `debug` increments `build_number.txt`, `release` does not, and the full script set now lives in the repo
 - F Adapt install and release-upload scripts to the current MemLists APK outputs and lowercase `changelog.md`

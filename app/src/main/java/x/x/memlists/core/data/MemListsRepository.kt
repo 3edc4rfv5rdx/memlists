@@ -74,6 +74,66 @@ class MemListsRepository(
         MemosHomeData(items = items, folders = folders)
     }
 
+    suspend fun loadListsHome(parentId: Long?): ListsHomeData = withContext(Dispatchers.IO) {
+        val currentFolderName = parentId?.let { folderId ->
+            databaseHelper.readableDatabase.query(
+                "lists",
+                arrayOf("name"),
+                "id = ?",
+                arrayOf(folderId.toString()),
+                null,
+                null,
+                null
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }
+
+        val selection = if (parentId == null) {
+            "parent_id IS NULL"
+        } else {
+            "parent_id = ?"
+        }
+        val args = if (parentId == null) emptyArray() else arrayOf(parentId.toString())
+
+        val containers = mutableListOf<ListContainerSummary>()
+        databaseHelper.readableDatabase.query(
+            "lists",
+            arrayOf("id", "name", "comment", "parent_id", "is_folder", "pin", "sort_order"),
+            selection,
+            args,
+            null,
+            null,
+            "sort_order ASC, name COLLATE NOCASE ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(0)
+                val isFolder = cursor.getInt(4) == 1
+                val counts = if (isFolder) {
+                    0 to 0
+                } else {
+                    loadListEntryCounts(id)
+                }
+                containers += ListContainerSummary(
+                    id = id,
+                    name = cursor.getString(1),
+                    comment = cursor.getStringOrNull(2),
+                    parentId = cursor.getLongOrNull(3),
+                    isFolder = isFolder,
+                    isLocked = !cursor.getStringOrNull(5).isNullOrBlank(),
+                    uncheckedCount = counts.first,
+                    totalCount = counts.second
+                )
+            }
+        }
+
+        ListsHomeData(
+            currentFolderId = parentId,
+            currentFolderName = currentFolderName,
+            containers = containers
+        )
+    }
+
     private fun android.database.sqlite.SQLiteDatabase.putSetting(key: String, value: String) {
         val contentValues = ContentValues().apply {
             put("key", key)
@@ -184,6 +244,22 @@ class MemListsRepository(
         }.simpleQueryForLong().toInt()
     }
 
+    private fun loadListEntryCounts(listId: Long): Pair<Int, Int> {
+        val total = databaseHelper.readableDatabase.compileStatement(
+            "SELECT COUNT(*) FROM entries WHERE list_id = ?"
+        ).apply {
+            bindLong(1, listId)
+        }.simpleQueryForLong().toInt()
+
+        val unchecked = databaseHelper.readableDatabase.compileStatement(
+            "SELECT COUNT(*) FROM entries WHERE list_id = ? AND is_checked = 0"
+        ).apply {
+            bindLong(1, listId)
+        }.simpleQueryForLong().toInt()
+
+        return unchecked to total
+    }
+
     private fun Cursor.toMemoItemSummary(photoCount: Int): MemoItemSummary {
         return MemoItemSummary(
             id = getLong(0),
@@ -252,6 +328,10 @@ class MemListsRepository(
 
     private fun Cursor.getIntOrNull(index: Int): Int? {
         return if (isNull(index)) null else getInt(index)
+    }
+
+    private fun Cursor.getLongOrNull(index: Int): Long? {
+        return if (isNull(index)) null else getLong(index)
     }
 
     companion object {

@@ -13,6 +13,7 @@ import x.x.memlists.app.AppViewModel
 import x.x.memlists.core.theme.MemListsTheme
 import x.x.memlists.core.ui.LoadingScreen
 import x.x.memlists.feature.lists.ListsHomeScreen
+import x.x.memlists.feature.lists.ListsViewModel
 import x.x.memlists.feature.memos.MemosHomeScreen
 import x.x.memlists.feature.memos.MemosViewModel
 import x.x.memlists.feature.settings.SettingsScreen
@@ -80,9 +81,26 @@ fun MemListsApp() {
                 )
             }
             composable(Routes.Lists) {
+                val listsViewModel: ListsViewModel = viewModel()
+                val listsUiState by listsViewModel.uiState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    listsViewModel.refresh()
+                }
+
                 ListsHomeScreen(
+                    currentFolderName = listsUiState.currentFolderName,
+                    isLoading = listsUiState.isLoading,
+                    containers = listsUiState.containers,
                     lw = lw,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = {
+                        if (listsUiState.currentFolderId == null) {
+                            navController.popBackStack()
+                        } else {
+                            listsViewModel.leaveFolder()
+                        }
+                    },
+                    onOpenFolder = listsViewModel::openFolder
                 )
             }
             composable(Routes.Settings) {

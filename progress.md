@@ -23,8 +23,11 @@
 - Updated the install and release-upload scripts for MemLists paths and outputs.
 - Implemented the first data-backed Memos home flow with SQLite loading, sorting, folder counts, and folder switching.
 - Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the Memos changes.
+- Implemented the first data-backed Lists home flow with SQLite loading, folder navigation, and list state indicators.
+- Removed leftover shell scripts from the previous scheme and kept only the `xcalc`-style set.
+- Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the Lists changes.
 
 ## Next
-- Replace the placeholder Lists home screen with real data-backed rendering.
 - Start the Memos module data flow and filtering skeleton.
 - Add memo creation and editing flow.
+- Start the Lists item screen and add or edit item flow.
