@@ -8,31 +8,41 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.StickyNote2
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.FolderCopy
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import x.x.memlists.core.data.MemoFolderSummary
 import x.x.memlists.core.data.MemoFolderType
 import x.x.memlists.core.data.MemoItemSummary
+import x.x.memlists.core.data.todayAsInt
 import x.x.memlists.core.data.firstDailyTime
 import x.x.memlists.core.data.formatDate
 import x.x.memlists.core.data.formatTime
 import x.x.memlists.core.data.formatTimes
+import x.x.memlists.core.theme.AppThemePalette
 import x.x.memlists.core.theme.LocalAppThemePalette
-import x.x.memlists.core.ui.HeroCard
+import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
-import x.x.memlists.core.ui.SectionTitle
-import x.x.memlists.core.ui.SpacerBlock
 import x.x.memlists.core.ui.UiTokens
 
 @Composable
@@ -46,18 +56,79 @@ fun MemosHomeScreen(
     onOpenSettings: () -> Unit,
     onAddMemo: () -> Unit,
     onOpenFolder: (MemoFolderType) -> Unit,
-    onBackFromFolder: () -> Unit
+    onBackFromFolder: () -> Unit,
+    onCloseRoot: () -> Unit
 ) {
     val palette = LocalAppThemePalette.current
+    var menuExpanded by remember { mutableStateOf(false) }
     ScreenScaffold(
         title = lw(selectedFolder?.titleKey ?: "MemLists"),
-        canNavigateBack = selectedFolder != null,
-        onNavigateBack = onBackFromFolder,
+        navigationButtonMode = if (selectedFolder == null) NavigationButtonMode.Close else NavigationButtonMode.Back,
+        onNavigateBack = {
+            if (selectedFolder == null) {
+                onCloseRoot()
+            } else {
+                onBackFromFolder()
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddMemo) {
-                androidx.compose.material3.Icon(
+                Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = lw("New memo")
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = { }) {
+                Icon(
+                    imageVector = Icons.Default.Alarm,
+                    contentDescription = lw("Check Reminders")
+                )
+            }
+            TextButton(onClick = { }) {
+                Text(
+                    text = lw("(All)"),
+                    color = palette.clText,
+                    fontSize = UiTokens.fsSmall
+                )
+            }
+            IconButton(onClick = { menuExpanded = true }) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = lw("Menu")
+                )
+            }
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(lw("Clear All Filters")) },
+                    onClick = { menuExpanded = false },
+                    enabled = false
+                )
+                DropdownMenuItem(
+                    text = { Text(lw("Filters")) },
+                    onClick = { menuExpanded = false },
+                    enabled = false
+                )
+                DropdownMenuItem(
+                    text = { Text(lw("Tag Filter")) },
+                    onClick = { menuExpanded = false },
+                    enabled = false
+                )
+                DropdownMenuItem(
+                    text = { Text(lw("Settings")) },
+                    onClick = {
+                        menuExpanded = false
+                        onOpenSettings()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(lw("About")) },
+                    onClick = { menuExpanded = false },
+                    enabled = false
                 )
             }
         }
@@ -69,28 +140,13 @@ fun MemosHomeScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                HeroCard(
-                    title = lw("Memos"),
-                    body = if (selectedFolder == null) lw("Main screen") else lw("Folders and lists"),
-                    icon = Icons.AutoMirrored.Filled.StickyNote2
-                )
-            }
             if (selectedFolder == null) {
                 item {
-                    HeroCard(
-                        title = lw("Open Lists"),
-                        body = lw("Folders and lists"),
-                        icon = Icons.Default.Checklist,
+                    MemoNavigationRow(
+                        title = lw("Lists"),
+                        subtitle = lw("Folders and lists"),
+                        palette = palette,
                         onClick = onOpenLists
-                    )
-                }
-                item {
-                    HeroCard(
-                        title = lw("Open settings"),
-                        body = lw("Shared settings"),
-                        icon = Icons.Default.Settings,
-                        onClick = onOpenSettings
                     )
                 }
             }
@@ -117,28 +173,26 @@ fun MemosHomeScreen(
                 }
             } else if (items.isEmpty()) {
                 item {
-                    HeroCard(
-                        title = lw("No items yet"),
-                        body = lw("The memos list is empty.")
+                    MemoEmptyRow(
+                        text = lw("No items yet"),
+                        palette = palette
                     )
                 }
             } else {
                 items(items, key = { it.id }) { item ->
-                    MemoItemCard(item = item, lw = lw)
+                    MemoItemCard(
+                        item = item,
+                        lw = lw,
+                        palette = palette
+                    )
                 }
             }
             if (selectedFolder == null && folders.isNotEmpty()) {
-                item {
-                    SpacerBlock()
-                }
-                item {
-                    SectionTitle(title = lw("Folders"))
-                }
                 items(folders, key = { it.type.name }) { folder ->
-                    HeroCard(
+                    MemoNavigationRow(
                         title = lw(folder.type.titleKey),
-                        body = folder.count.toString(),
-                        icon = Icons.Default.Checklist,
+                        subtitle = folder.count.toString(),
+                        palette = palette,
                         onClick = { onOpenFolder(folder.type) }
                     )
                 }
@@ -150,12 +204,15 @@ fun MemosHomeScreen(
 @Composable
 private fun MemoItemCard(
     item: MemoItemSummary,
-    lw: (String) -> String
+    lw: (String) -> String,
+    palette: AppThemePalette
 ) {
-    val palette = LocalAppThemePalette.current
+    val isToday = item.date == todayAsInt()
     Card(
         shape = UiTokens.shapeLarge,
-        colors = CardDefaults.cardColors(containerColor = palette.clFill)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isToday) palette.clSel.copy(alpha = 0.45f) else palette.clFill
+        )
     ) {
         Column(
             modifier = Modifier
@@ -169,17 +226,21 @@ private fun MemoItemCard(
             ) {
                 Text(
                     text = item.title,
-                    color = palette.clText,
+                    color = if (isToday) androidx.compose.ui.graphics.Color.Red else palette.clText,
                     fontSize = UiTokens.fsMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
                 if (item.priority > 0) {
-                    Text(
-                        text = "★".repeat(item.priority),
-                        color = palette.clText,
-                        fontSize = UiTokens.fsNormal
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        repeat(item.priority) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = item.title,
+                                tint = palette.clText
+                            )
+                        }
+                    }
                 }
             }
             item.content?.takeIf { it.isNotBlank() }?.let {
@@ -199,7 +260,7 @@ private fun MemoItemCard(
             memoDetailsLine(item)?.let {
                 Text(
                     text = it,
-                    color = palette.clText.copy(alpha = 0.84f),
+                    color = if (isToday || item.reminderType != 0) androidx.compose.ui.graphics.Color.Red else palette.clText.copy(alpha = 0.84f),
                     fontSize = UiTokens.fsSmall
                 )
             }
@@ -211,6 +272,68 @@ private fun MemoItemCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun MemoNavigationRow(
+    title: String,
+    subtitle: String?,
+    palette: AppThemePalette,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        shape = UiTokens.shapeLarge,
+        colors = CardDefaults.cardColors(containerColor = palette.clFill)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.FolderCopy,
+                contentDescription = title,
+                tint = palette.clText
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = title,
+                    color = palette.clText,
+                    fontSize = UiTokens.fsMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                subtitle?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it,
+                        color = palette.clText.copy(alpha = 0.82f),
+                        fontSize = UiTokens.fsSmall
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MemoEmptyRow(
+    text: String,
+    palette: AppThemePalette
+) {
+    Card(
+        shape = UiTokens.shapeLarge,
+        colors = CardDefaults.cardColors(containerColor = palette.clFill)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            color = palette.clText,
+            fontSize = UiTokens.fsNormal
+        )
     }
 }
 

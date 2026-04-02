@@ -1,17 +1,15 @@
-package x.x.memlists.feature.memos
+package x.x.memlists.feature.lists
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -26,28 +24,25 @@ import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.PrimaryActionButton
 import x.x.memlists.core.ui.ScreenScaffold
 import x.x.memlists.core.ui.ScrollableScreen
-import x.x.memlists.core.ui.SettingSwitchCard
 import x.x.memlists.core.ui.UiTokens
 
 @Composable
-fun MemoEditorScreen(
+fun ListEntryEditorScreen(
     application: MemListsApplication,
+    listId: Long,
     lw: (String) -> String,
     onNavigateBack: () -> Unit,
     onSaved: () -> Unit
 ) {
     val palette = LocalAppThemePalette.current
     val scope = rememberCoroutineScope()
-    var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
-    var tags by remember { mutableStateOf("") }
-    var dateText by remember { mutableStateOf("") }
-    var priority by remember { mutableIntStateOf(0) }
-    var canSave by remember { mutableStateOf(true) }
+    var name by remember { mutableStateOf("") }
+    var quantity by remember { mutableStateOf("") }
+    var unit by remember { mutableStateOf("") }
     var validationMessage by remember { mutableStateOf<String?>(null) }
 
     ScreenScaffold(
-        title = lw("New memo"),
+        title = lw("New item"),
         navigationButtonMode = NavigationButtonMode.Back,
         onNavigateBack = onNavigateBack
     ) { paddingValues ->
@@ -63,49 +58,31 @@ fun MemoEditorScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        text = lw("Title"),
+                        text = lw("Name"),
                         color = palette.clText,
                         fontSize = UiTokens.fsNormal,
                         fontWeight = FontWeight.Bold
                     )
                     OutlinedTextField(
-                        value = title,
+                        value = name,
                         onValueChange = {
-                            title = it
+                            name = it
                             validationMessage = null
                         },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
                     OutlinedTextField(
-                        value = content,
-                        onValueChange = { content = it },
+                        value = quantity,
+                        onValueChange = { quantity = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(lw("Content")) }
+                        label = { Text(lw("Quantity")) }
                     )
                     OutlinedTextField(
-                        value = tags,
-                        onValueChange = { tags = it },
+                        value = unit,
+                        onValueChange = { unit = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(lw("Tags")) }
-                    )
-                    OutlinedTextField(
-                        value = dateText,
-                        onValueChange = {
-                            dateText = it.filter(Char::isDigit).take(8)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(lw("Date")) },
-                        supportingText = {
-                            Text(lw("Use YYYYMMDD or leave empty"))
-                        },
-                        singleLine = true
-                    )
-                    SettingSwitchCard(
-                        title = lw("Priority high"),
-                        body = lw("Enable for important memos"),
-                        checked = priority > 0,
-                        onCheckedChange = { priority = if (it) 1 else 0 }
+                        label = { Text(lw("Unit")) }
                     )
                     validationMessage?.let {
                         Text(
@@ -115,37 +92,23 @@ fun MemoEditorScreen(
                         )
                     }
                     PrimaryActionButton(
-                        text = lw("Save memo"),
+                        text = lw("Save item"),
                         onClick = {
-                            val trimmedTitle = title.trim()
-                            if (trimmedTitle.isEmpty()) {
-                                validationMessage = lw("Title is required")
+                            val trimmedName = name.trim()
+                            if (trimmedName.isEmpty()) {
+                                validationMessage = lw("Name is required")
                                 return@PrimaryActionButton
                             }
-                            val parsedDate = if (dateText.isBlank()) {
-                                null
-                            } else {
-                                dateText.toIntOrNull()
-                            }
-                            if (dateText.isNotBlank() && parsedDate == null) {
-                                validationMessage = lw("Date format is invalid")
-                                return@PrimaryActionButton
-                            }
-
-                            canSave = false
                             scope.launch {
-                                application.repository.insertMemo(
-                                    title = trimmedTitle,
-                                    content = content.trim().ifBlank { null },
-                                    tags = tags.trim().ifBlank { null },
-                                    priority = priority,
-                                    date = parsedDate
+                                application.repository.insertListEntry(
+                                    listId = listId,
+                                    name = trimmedName,
+                                    quantity = quantity.trim().ifBlank { null },
+                                    unit = unit.trim().ifBlank { null }
                                 )
-                                canSave = true
                                 onSaved()
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                        }
                     )
                 }
             }

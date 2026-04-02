@@ -1,5 +1,6 @@
 package x.x.memlists.feature.lists
 
+import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -7,12 +8,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import x.x.memlists.MemListsApplication
 
 class ListsViewModel(
-    application: MemListsApplication
+    application: Application
 ) : AndroidViewModel(application) {
-    private val repository = application.repository
+    private val repository = (application as x.x.memlists.MemListsApplication).repository
 
     private val _uiState = MutableStateFlow(ListsUiState())
     val uiState: StateFlow<ListsUiState> = _uiState.asStateFlow()
@@ -44,4 +44,3 @@ class ListsViewModel(
         }
     }
 }
-

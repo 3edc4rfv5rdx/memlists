@@ -1,10 +1,12 @@
 package x.x.memlists
 
+import android.app.Activity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -16,6 +18,10 @@ import x.x.memlists.core.theme.MemListsTheme
 import x.x.memlists.core.ui.LoadingScreen
 import x.x.memlists.feature.lists.ListsHomeScreen
 import x.x.memlists.feature.lists.ListsViewModel
+import x.x.memlists.feature.lists.ListDetailScreen
+import x.x.memlists.feature.lists.ListDetailViewModel
+import x.x.memlists.feature.lists.ListEditorScreen
+import x.x.memlists.feature.lists.ListEntryEditorScreen
 import x.x.memlists.feature.memos.MemosHomeScreen
 import x.x.memlists.feature.memos.MemoEditorScreen
 import x.x.memlists.feature.memos.MemosViewModel
@@ -28,7 +34,20 @@ private object Routes {
     const val Lists = "lists"
     const val Settings = "settings"
     const val MemoNew = "memo_new"
+    const val ListNew = "list_new/{parentId}/{isFolder}"
+    const val ListDetail = "list_detail/{listId}"
+    const val EntryNew = "entry_new/{listId}"
 }
+
+private fun listNewRoute(parentId: Long?, isFolder: Boolean): String {
+    val encodedParent = parentId ?: -1L
+    val encodedFolder = if (isFolder) 1 else 0
+    return "list_new/$encodedParent/$encodedFolder"
+}
+
+private fun listDetailRoute(listId: Long): String = "list_detail/$listId"
+
+private fun entryNewRoute(listId: Long): String = "entry_new/$listId"
 
 @Composable
 fun MemListsApp() {
@@ -47,6 +66,7 @@ fun MemListsApp() {
 
     MemListsTheme(palette = palette) {
         val navController = rememberNavController()
+        val activity = LocalContext.current as? Activity
         val startDestination = if (uiState.settings.isFirstLaunch) Routes.Welcome else Routes.Memos
 
         NavHost(
@@ -67,7 +87,7 @@ fun MemListsApp() {
                 val shouldRefresh by refreshHandle
                     ?.getStateFlow("memos_refresh", false)
                     ?.collectAsState()
-                    ?: androidx.compose.runtime.remember { mutableStateOf(false) }
+                    ?: remember { mutableStateOf(false) }
 
                 LaunchedEffect(uiState.settings.newestFirst) {
                     memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
@@ -94,6 +114,9 @@ fun MemListsApp() {
                     },
                     onBackFromFolder = {
                         memosViewModel.leaveFolder(newestFirst = uiState.settings.newestFirst)
+                    },
+                    onCloseRoot = {
+                        activity?.finish()
                     }
                 )
             }
@@ -112,13 +135,26 @@ fun MemListsApp() {
             composable(Routes.Lists) {
                 val listsViewModel: ListsViewModel = viewModel()
                 val listsUiState by listsViewModel.uiState.collectAsState()
+                val refreshHandle = navController.currentBackStackEntry?.savedStateHandle
+                val shouldRefresh by refreshHandle
+                    ?.getStateFlow("lists_refresh", false)
+                    ?.collectAsState()
+                    ?: remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     listsViewModel.refresh()
                 }
 
+                LaunchedEffect(shouldRefresh) {
+                    if (shouldRefresh) {
+                        listsViewModel.refresh()
+                        refreshHandle?.set("lists_refresh", false)
+                    }
+                }
+
                 ListsHomeScreen(
                     currentFolderName = listsUiState.currentFolderName,
+                    currentFolderId = listsUiState.currentFolderId,
                     isLoading = listsUiState.isLoading,
                     containers = listsUiState.containers,
                     lw = lw,
@@ -129,7 +165,72 @@ fun MemListsApp() {
                             listsViewModel.leaveFolder()
                         }
                     },
-                    onOpenFolder = listsViewModel::openFolder
+                    onOpenFolder = listsViewModel::openFolder,
+                    onOpenList = { listId -> navController.navigate(listDetailRoute(listId)) },
+                    onAddList = { navController.navigate(listNewRoute(listsUiState.currentFolderId, isFolder = false)) },
+                    onAddFolder = { navController.navigate(listNewRoute(null, isFolder = true)) }
+                )
+            }
+            composable(Routes.ListNew) { backStackEntry ->
+                val application = LocalContext.current.applicationContext as MemListsApplication
+                val parentId = backStackEntry.arguments?.getString("parentId")?.toLongOrNull()?.takeIf { it >= 0L }
+                val isFolder = backStackEntry.arguments?.getString("isFolder") == "1"
+                ListEditorScreen(
+                    application = application,
+                    isFolder = isFolder,
+                    parentId = parentId,
+                    lw = lw,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaved = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("lists_refresh", true)
+                        navController.popBackStack()
+                    }
+                )
+            }
+            composable(Routes.ListDetail) { backStackEntry ->
+                val listId = backStackEntry.arguments?.getString("listId")?.toLongOrNull() ?: return@composable
+                val detailViewModel: ListDetailViewModel = viewModel()
+                val detailUiState by detailViewModel.uiState.collectAsState()
+                val refreshHandle = navController.currentBackStackEntry?.savedStateHandle
+                val shouldRefresh by refreshHandle
+                    ?.getStateFlow("list_detail_refresh", false)
+                    ?.collectAsState()
+                    ?: remember { mutableStateOf(false) }
+
+                LaunchedEffect(listId) {
+                    detailViewModel.load(listId)
+                }
+                LaunchedEffect(shouldRefresh) {
+                    if (shouldRefresh) {
+                        detailViewModel.load(listId)
+                        refreshHandle?.set("list_detail_refresh", false)
+                    }
+                }
+
+                ListDetailScreen(
+                    title = detailUiState.title,
+                    comment = detailUiState.comment,
+                    isLoading = detailUiState.isLoading,
+                    uncheckedEntries = detailUiState.uncheckedEntries,
+                    checkedEntries = detailUiState.checkedEntries,
+                    lw = lw,
+                    onNavigateBack = { navController.popBackStack() },
+                    onAddEntry = { navController.navigate(entryNewRoute(listId)) },
+                    onToggleChecked = detailViewModel::toggleChecked
+                )
+            }
+            composable(Routes.EntryNew) { backStackEntry ->
+                val application = LocalContext.current.applicationContext as MemListsApplication
+                val listId = backStackEntry.arguments?.getString("listId")?.toLongOrNull() ?: return@composable
+                ListEntryEditorScreen(
+                    application = application,
+                    listId = listId,
+                    lw = lw,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaved = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("list_detail_refresh", true)
+                        navController.popBackStack()
+                    }
                 )
             }
             composable(Routes.Settings) {
@@ -172,9 +273,11 @@ private fun WelcomeRoute(
     WelcomeScreen(
         languages = uiState.languages,
         themes = uiState.themes,
-        initialLanguageCode = uiState.settings.languageCode,
-        initialThemeName = uiState.settings.themeName,
+        selectedLanguageCode = uiState.settings.languageCode,
+        selectedThemeName = uiState.settings.themeName,
         lw = lw,
+        onLanguageSelected = viewModel::previewWelcomeLanguage,
+        onThemeSelected = viewModel::previewWelcomeTheme,
         onStart = viewModel::saveWelcomeSelection
     )
 }

@@ -1,5 +1,6 @@
 package x.x.memlists.feature.memos
 
+import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -7,13 +8,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import x.x.memlists.MemListsApplication
 import x.x.memlists.core.data.MemoFolderType
 
 class MemosViewModel(
-    application: MemListsApplication
+    application: Application
 ) : AndroidViewModel(application) {
-    private val repository = application.repository
+    private val repository = (application as x.x.memlists.MemListsApplication).repository
 
     private val _uiState = MutableStateFlow(MemosUiState())
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
@@ -48,4 +48,3 @@ class MemosViewModel(
         }
     }
 }
-

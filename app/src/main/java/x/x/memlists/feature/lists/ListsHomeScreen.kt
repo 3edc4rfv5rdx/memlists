@@ -9,13 +9,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -25,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import x.x.memlists.core.data.ListContainerSummary
 import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.HeroCard
+import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
 import x.x.memlists.core.ui.SectionTitle
 import x.x.memlists.core.ui.UiTokens
@@ -32,17 +37,39 @@ import x.x.memlists.core.ui.UiTokens
 @Composable
 fun ListsHomeScreen(
     currentFolderName: String?,
+    currentFolderId: Long?,
     isLoading: Boolean,
     containers: List<ListContainerSummary>,
     lw: (String) -> String,
     onNavigateBack: () -> Unit,
-    onOpenFolder: (Long) -> Unit
+    onOpenFolder: (Long) -> Unit,
+    onOpenList: (Long) -> Unit,
+    onAddList: () -> Unit,
+    onAddFolder: () -> Unit
 ) {
     val palette = LocalAppThemePalette.current
     ScreenScaffold(
         title = lw(currentFolderName ?: "Lists"),
-        canNavigateBack = currentFolderName != null,
-        onNavigateBack = onNavigateBack
+        navigationButtonMode = NavigationButtonMode.Back,
+        onNavigateBack = onNavigateBack,
+        floatingActionButton = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (currentFolderId == null) {
+                    SmallFloatingActionButton(onClick = onAddFolder) {
+                        Icon(
+                            imageVector = Icons.Default.CreateNewFolder,
+                            contentDescription = lw("New folder")
+                        )
+                    }
+                }
+                FloatingActionButton(onClick = onAddList) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = lw("New list")
+                    )
+                }
+            }
+        }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -51,20 +78,6 @@ fun ListsHomeScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                HeroCard(
-                    title = lw("Lists"),
-                    body = lw("Folders and lists"),
-                    icon = Icons.Default.FolderCopy
-                )
-            }
-            item {
-                HeroCard(
-                    title = lw("Items dictionary"),
-                    body = lw("Add later from the Lists module"),
-                    icon = Icons.AutoMirrored.Filled.MenuBook
-                )
-            }
             if (isLoading) {
                 item {
                     Card(
@@ -100,17 +113,8 @@ fun ListsHomeScreen(
                 items(containers, key = { it.id }) { container ->
                     ListContainerCard(
                         container = container,
-                        onOpenFolder = onOpenFolder
-                    )
-                }
-            }
-            if (currentFolderName == null) {
-                item {
-                    HeroCard(
-                        title = lw("Open memos module"),
-                        body = lw("Main screen"),
-                        icon = Icons.Default.Checklist,
-                        onClick = onNavigateBack
+                        onOpenFolder = onOpenFolder,
+                        onOpenList = onOpenList
                     )
                 }
             }
@@ -121,22 +125,19 @@ fun ListsHomeScreen(
 @Composable
 private fun ListContainerCard(
     container: ListContainerSummary,
-    onOpenFolder: (Long) -> Unit
+    onOpenFolder: (Long) -> Unit,
+    onOpenList: (Long) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
-    val clickable = if (container.isFolder) {
-        Modifier.fillMaxWidth()
-    } else {
-        Modifier.fillMaxWidth()
-    }
-
     Card(
-        modifier = clickable,
+        modifier = Modifier.fillMaxWidth(),
         shape = UiTokens.shapeLarge,
         colors = CardDefaults.cardColors(containerColor = palette.clFill),
         onClick = {
             if (container.isFolder) {
                 onOpenFolder(container.id)
+            } else {
+                onOpenList(container.id)
             }
         }
     ) {

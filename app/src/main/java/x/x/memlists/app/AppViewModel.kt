@@ -1,5 +1,6 @@
 package x.x.memlists.app
 
+import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -7,16 +8,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import x.x.memlists.MemListsApplication
 import x.x.memlists.core.data.SettingsData
 import x.x.memlists.core.theme.AppThemePalette
 
 class AppViewModel(
-    application: MemListsApplication
+    application: Application
 ) : AndroidViewModel(application) {
-    private val repository = application.repository
-    val localizer = application.localizer
-    private val themeRepository = application.themeRepository
+    private val memListsApplication = application as x.x.memlists.MemListsApplication
+    private val repository = memListsApplication.repository
+    val localizer = memListsApplication.localizer
+    private val themeRepository = memListsApplication.themeRepository
 
     private val _uiState = MutableStateFlow(
         AppUiState(
@@ -41,6 +42,22 @@ class AppViewModel(
 
     fun resolveTheme(themeName: String): AppThemePalette {
         return themeRepository.resolveTheme(themeName)
+    }
+
+    fun previewWelcomeLanguage(languageCode: String) {
+        _uiState.update {
+            it.copy(
+                settings = it.settings.copy(languageCode = languageCode)
+            )
+        }
+    }
+
+    fun previewWelcomeTheme(themeName: String) {
+        _uiState.update {
+            it.copy(
+                settings = it.settings.copy(themeName = themeName)
+            )
+        }
     }
 
     fun saveWelcomeSelection(languageCode: String, themeName: String) {
@@ -83,4 +100,3 @@ class AppViewModel(
         }
     }
 }
-

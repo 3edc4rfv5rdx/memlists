@@ -170,6 +170,116 @@ class MemListsRepository(
         databaseHelper.writableDatabase.insertOrThrow("items", null, values)
     }
 
+    suspend fun insertList(
+        name: String,
+        comment: String?,
+        isFolder: Boolean,
+        parentId: Long?
+    ): Long = withContext(Dispatchers.IO) {
+        val sortOrder = databaseHelper.readableDatabase.compileStatement(
+            "SELECT COALESCE(MAX(sort_order), 0) FROM lists WHERE " +
+                if (parentId == null) "parent_id IS NULL" else "parent_id = ?"
+        ).apply {
+            if (parentId != null) {
+                bindLong(1, parentId)
+            }
+        }.simpleQueryForLong().toInt() + 1
+
+        val values = ContentValues().apply {
+            put("name", name)
+            put("comment", comment)
+            put("sort_order", sortOrder)
+            if (parentId == null) {
+                putNull("parent_id")
+            } else {
+                put("parent_id", parentId)
+            }
+            put("is_folder", if (isFolder) 1 else 0)
+            putNull("pin")
+        }
+        databaseHelper.writableDatabase.insertOrThrow("lists", null, values)
+    }
+
+    suspend fun loadListDetail(listId: Long): ListDetailData = withContext(Dispatchers.IO) {
+        val listRow = databaseHelper.readableDatabase.query(
+            "lists",
+            arrayOf("name", "comment"),
+            "id = ?",
+            arrayOf(listId.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            require(cursor.moveToFirst()) { "List not found" }
+            cursor.getString(0) to cursor.getStringOrNull(1)
+        }
+
+        val unchecked = mutableListOf<ListEntrySummary>()
+        val checked = mutableListOf<ListEntrySummary>()
+        databaseHelper.readableDatabase.query(
+            "entries",
+            arrayOf("id", "list_id", "dict_id", "name", "unit", "quantity", "is_checked", "sort_order"),
+            "list_id = ?",
+            arrayOf(listId.toString()),
+            null,
+            null,
+            "is_checked ASC, sort_order ASC, id ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val entry = cursor.toListEntrySummary()
+                if (entry.isChecked) {
+                    checked += entry
+                } else {
+                    unchecked += entry
+                }
+            }
+        }
+
+        ListDetailData(
+            listId = listId,
+            name = listRow.first,
+            comment = listRow.second,
+            uncheckedEntries = unchecked,
+            checkedEntries = checked
+        )
+    }
+
+    suspend fun insertListEntry(
+        listId: Long,
+        name: String,
+        quantity: String?,
+        unit: String?
+    ): Long = withContext(Dispatchers.IO) {
+        val sortOrder = databaseHelper.readableDatabase.compileStatement(
+            "SELECT COALESCE(MAX(sort_order), 0) FROM entries WHERE list_id = ?"
+        ).apply {
+            bindLong(1, listId)
+        }.simpleQueryForLong().toInt() + 1
+
+        val values = ContentValues().apply {
+            put("list_id", listId)
+            putNull("dict_id")
+            put("name", name)
+            put("unit", unit)
+            put("quantity", quantity)
+            put("is_checked", 0)
+            put("sort_order", sortOrder)
+        }
+        databaseHelper.writableDatabase.insertOrThrow("entries", null, values)
+    }
+
+    suspend fun updateEntryChecked(entryId: Long, isChecked: Boolean) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            put("is_checked", if (isChecked) 1 else 0)
+        }
+        databaseHelper.writableDatabase.update(
+            "entries",
+            values,
+            "id = ?",
+            arrayOf(entryId.toString())
+        )
+    }
+
     private fun android.database.sqlite.SQLiteDatabase.putSetting(key: String, value: String) {
         val contentValues = ContentValues().apply {
             put("key", key)
@@ -315,6 +425,22 @@ class MemListsRepository(
             yearly = getInt(14) == 1,
             monthly = getInt(15) == 1,
             photoCount = photoCount
+        )
+    }
+
+    private fun Cursor.toListEntrySummary(): ListEntrySummary {
+        val dictId = getLongOrNull(2)
+        val manualName = getStringOrNull(3).orEmpty()
+        val unit = getStringOrNull(4)
+        return ListEntrySummary(
+            id = getLong(0),
+            listId = getLong(1),
+            name = if (dictId == null) manualName else manualName,
+            quantity = getStringOrNull(5),
+            unit = unit,
+            isChecked = getInt(6) == 1,
+            sortOrder = getInt(7),
+            photoCount = 0
         )
     }
 

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -40,13 +42,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import x.x.memlists.core.theme.LocalAppThemePalette
 
+enum class NavigationButtonMode {
+    None,
+    Back,
+    Close
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenScaffold(
     title: String,
-    canNavigateBack: Boolean,
+    navigationButtonMode: NavigationButtonMode = NavigationButtonMode.None,
     onNavigateBack: () -> Unit,
     floatingActionButton: @Composable () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
@@ -63,19 +72,25 @@ fun ScreenScaffold(
                     )
                 },
                 navigationIcon = {
-                    if (canNavigateBack) {
+                    if (navigationButtonMode != NavigationButtonMode.None) {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                imageVector = when (navigationButtonMode) {
+                                    NavigationButtonMode.Back -> Icons.AutoMirrored.Filled.ArrowBack
+                                    NavigationButtonMode.Close -> Icons.Default.Close
+                                    NavigationButtonMode.None -> Icons.AutoMirrored.Filled.ArrowBack
+                                },
                                 contentDescription = title
                             )
                         }
                     }
                 },
+                actions = actions,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = palette.clUpBar,
                     titleContentColor = palette.clText,
-                    navigationIconContentColor = palette.clText
+                    navigationIconContentColor = palette.clText,
+                    actionIconContentColor = palette.clText
                 )
             )
         },
@@ -102,7 +117,7 @@ fun ScrollableScreen(
 @Composable
 fun HeroCard(
     title: String,
-    body: String,
+    body: String? = null,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     icon: ImageVector? = null
@@ -150,11 +165,13 @@ fun HeroCard(
                     fontWeight = FontWeight.Bold,
                     color = palette.clText
                 )
-                Text(
-                    text = body,
-                    fontSize = UiTokens.fsNormal,
-                    color = palette.clText.copy(alpha = 0.84f)
-                )
+                body?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it,
+                        fontSize = UiTokens.fsNormal,
+                        color = palette.clText.copy(alpha = 0.84f)
+                    )
+                }
             }
         }
     }
@@ -186,8 +203,8 @@ fun OptionGroup(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             SectionTitle(title)
             options.forEachIndexed { index, option ->
@@ -201,7 +218,7 @@ fun OptionGroup(
                 ) {
                     Text(
                         text = labelForOption(option),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         fontSize = UiTokens.fsNormal,
                         color = palette.clText,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal

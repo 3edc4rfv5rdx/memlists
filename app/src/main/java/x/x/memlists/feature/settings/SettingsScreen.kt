@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import x.x.memlists.core.data.SettingsData
 import x.x.memlists.core.i18n.LanguageOption
 import x.x.memlists.core.theme.AppThemePalette
+import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.OptionGroup
 import x.x.memlists.core.ui.ScreenScaffold
 import x.x.memlists.core.ui.ScrollableScreen
@@ -26,7 +27,7 @@ fun SettingsScreen(
 ) {
     ScreenScaffold(
         title = lw("Settings"),
-        canNavigateBack = true,
+        navigationButtonMode = NavigationButtonMode.Back,
         onNavigateBack = onNavigateBack
     ) { paddingValues ->
         ScrollableScreen(paddingValues = paddingValues) {
@@ -75,4 +76,3 @@ fun SettingsScreen(
         }
     }
 }
-

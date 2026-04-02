@@ -29,8 +29,11 @@
 - Renamed the changelog file to `CHANGELOG.md` and aligned script references.
 - Implemented the first memo creation flow with a dedicated editor screen and SQLite insert.
 - Confirmed again that `./gradlew :app:assembleDebug` completes successfully after the memo editor changes.
+- Reworked the welcome and main memos navigation closer to the specification and removed the extra hero-style shortcuts.
+- Updated all screens to the new `ScreenScaffold` navigation API and confirmed a clean rebuild.
+- Installed the rebuilt debug APK to the emulator and confirmed that `MainActivity` is resumed.
 
 ## Next
-- Start the Memos module data flow and filtering skeleton.
+- Continue replacing provisional UI with spec-driven layouts and behavior.
 - Extend memo editing beyond the first create flow and add reminder controls.
-- Start the Lists item screen and add or edit item flow.
+- Continue the Lists module toward the spec screens and actions.

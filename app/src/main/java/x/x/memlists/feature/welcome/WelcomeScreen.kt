@@ -5,10 +5,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import x.x.memlists.core.i18n.LanguageOption
@@ -23,45 +19,43 @@ import x.x.memlists.core.ui.ScrollableScreen
 fun WelcomeScreen(
     languages: List<LanguageOption>,
     themes: List<AppThemePalette>,
-    initialLanguageCode: String,
-    initialThemeName: String,
+    selectedLanguageCode: String,
+    selectedThemeName: String,
     lw: (String) -> String,
+    onLanguageSelected: (String) -> Unit,
+    onThemeSelected: (String) -> Unit,
     onStart: (languageCode: String, themeName: String) -> Unit
 ) {
-    var languageCode by remember(initialLanguageCode) { mutableStateOf(initialLanguageCode) }
-    var themeName by remember(initialThemeName) { mutableStateOf(initialThemeName) }
-
     ScreenScaffold(
         title = lw("Welcome"),
-        canNavigateBack = false,
+        navigationButtonMode = x.x.memlists.core.ui.NavigationButtonMode.None,
         onNavigateBack = {}
     ) { paddingValues ->
         ScrollableScreen(paddingValues = paddingValues) {
             HeroCard(
                 title = lw("Welcome to MemLists"),
-                body = lw("Combined memos and universal lists"),
                 icon = Icons.Default.AutoAwesome
             )
             OptionGroup(
                 title = lw("Choose language"),
                 options = languages.map { it.code },
-                selectedOption = languageCode,
+                selectedOption = selectedLanguageCode,
                 labelForOption = { code ->
                     val option = languages.first { it.code == code }
                     lw(option.labelKey)
                 },
-                onOptionSelected = { languageCode = it }
+                onOptionSelected = onLanguageSelected
             )
             OptionGroup(
                 title = lw("Choose theme"),
                 options = themes.map { it.name },
-                selectedOption = themeName,
+                selectedOption = selectedThemeName,
                 labelForOption = { lw(it) },
-                onOptionSelected = { themeName = it }
+                onOptionSelected = onThemeSelected
             )
             PrimaryActionButton(
                 text = lw("Start"),
-                onClick = { onStart(languageCode, themeName) },
+                onClick = { onStart(selectedLanguageCode, selectedThemeName) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp, bottom = 12.dp)
