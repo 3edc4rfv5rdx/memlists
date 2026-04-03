@@ -381,14 +381,34 @@ fun AboutDialog(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "${lw("Version")}: $versionName (build $versionCode)",
+                    text = "${lw("Version")}: $versionName",
+                    fontSize = UiTokens.fsNormal,
+                    color = palette.clText
+                )
+                Text(
+                    text = "${lw("Build")}: $versionCode",
+                    fontSize = UiTokens.fsNormal,
+                    color = palette.clText
+                )
+                Text(
+                    text = "${lw("Author")}: Eugen and AI",
+                    fontSize = UiTokens.fsNormal,
+                    color = palette.clText
+                )
+                Text(
+                    text = "Github: 3edc4rfv5rdx",
+                    fontSize = UiTokens.fsNormal,
+                    color = palette.clText
+                )
+                Text(
+                    text = "Email: 3edc4rfv5rdx@gmail.com",
                     fontSize = UiTokens.fsNormal,
                     color = palette.clText
                 )
                 Text(
                     text = "© 2026",
-                    fontSize = UiTokens.fsSmall,
-                    color = palette.clText.copy(alpha = 0.7f)
+                    fontSize = UiTokens.fsNormal,
+                    color = palette.clText
                 )
             }
         },
