@@ -9,37 +9,32 @@ data class LanguageOption(
     val labelKey: String
 )
 
-private data class TranslationRecord(
-    val ru: String? = null,
-    val ua: String? = null
-)
-
 class AppLocalizer(
     private val context: Context
 ) {
     private val gson = Gson()
 
-    val languageOptions: List<LanguageOption> = listOf(
-        LanguageOption(code = "en", labelKey = "English"),
-        LanguageOption(code = "ru", labelKey = "Russian"),
-        LanguageOption(code = "ua", labelKey = "Ukrainian")
-    )
-
-    private val translations: Map<String, TranslationRecord> by lazy {
+    private val rawData: Map<String, Map<String, String>> by lazy {
         context.assets.open("i18n.json").bufferedReader().use { reader ->
-            val type = object : TypeToken<Map<String, TranslationRecord>>() {}.type
-            gson.fromJson<Map<String, TranslationRecord>>(reader, type).orEmpty()
+            val type = object : TypeToken<Map<String, Map<String, String>>>() {}.type
+            gson.fromJson<Map<String, Map<String, String>>>(reader, type).orEmpty()
         }
+    }
+
+    private val langMap: Map<String, String> by lazy {
+        rawData["_lang"].orEmpty()
+    }
+
+    private val translations: Map<String, Map<String, String>> by lazy {
+        rawData.filterKeys { it != "_lang" }
+    }
+
+    val languageOptions: List<LanguageOption> by lazy {
+        langMap.map { (code, labelKey) -> LanguageOption(code = code, labelKey = labelKey) }
     }
 
     fun lw(key: String, languageCode: String): String {
         if (languageCode == "en") return key
-        val translation = translations[key] ?: return key
-        return when (languageCode) {
-            "ru" -> translation.ru ?: key
-            "ua" -> translation.ua ?: key
-            else -> key
-        }
+        return translations[key]?.get(languageCode) ?: key
     }
 }
-

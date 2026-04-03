@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- R Dynamic language list from i18n.json _lang meta-key instead of hardcoded list in AppLocalizer
 - R Move i18n/translations.json → assets/i18n.json (reformatted multi-line) and theme/themes.json → assets/themes.json; remove empty subdirs
 - N About dialog with app icon, version, build, author, github, email, copyright; accessible from main menu
 - F Snackbar text: increase font to fsMedium (18sp) bold; add fwNormal/fwBold tokens to UiTokens

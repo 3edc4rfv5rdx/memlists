@@ -1,4 +1,9 @@
 {
+  "_lang": {
+    "en": "English",
+    "ru": "Russian",
+    "ua": "Ukrainian"
+  },
   "MemLists": {
     "ru": "MemLists",
     "ua": "MemLists"
