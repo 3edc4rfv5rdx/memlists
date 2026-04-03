@@ -1,6 +1,8 @@
 package x.x.memlists.feature.memos
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.Checkbox
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -59,7 +61,8 @@ fun MemosHomeScreen(
     onAddMemo: () -> Unit,
     onOpenFolder: (MemoFolderType) -> Unit,
     onBackFromFolder: () -> Unit,
-    onCloseRoot: () -> Unit
+    onCloseRoot: () -> Unit,
+    onToggleActive: (MemoItemSummary) -> Unit = {}
 ) {
     val palette = LocalAppThemePalette.current
     val visibleItems = if (selectedFolder == null) {
@@ -102,7 +105,7 @@ fun MemosHomeScreen(
                 Text(
                     text = lw("(All)"),
                     color = palette.clText,
-                    fontSize = UiTokens.fsSmall
+                    fontSize = UiTokens.fsNormal
                 )
             }
             IconButton(onClick = { menuExpanded = true }) {
@@ -195,7 +198,8 @@ fun MemosHomeScreen(
                     MemoItemCard(
                         item = item,
                         lw = lw,
-                        palette = palette
+                        palette = palette,
+                        onToggleActive = { onToggleActive(item) }
                     )
                 }
             }
@@ -217,7 +221,8 @@ fun MemosHomeScreen(
 private fun MemoItemCard(
     item: MemoItemSummary,
     lw: (String) -> String,
-    palette: AppThemePalette
+    palette: AppThemePalette,
+    onToggleActive: () -> Unit = {}
 ) {
     val isToday = item.date == todayAsInt()
     Card(
@@ -226,12 +231,24 @@ private fun MemoItemCard(
             containerColor = if (isToday) palette.clSel.copy(alpha = 0.45f) else palette.clFill
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(start = 4.dp, end = 18.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.Top
         ) {
+            if (item.reminderType != 0) {
+                Checkbox(
+                    checked = item.active,
+                    onCheckedChange = { onToggleActive() }
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = if (item.reminderType == 0) 18.dp else 0.dp, top = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -266,22 +283,23 @@ private fun MemoItemCard(
                 Text(
                     text = "${lw("Tags")}: $it",
                     color = palette.clText.copy(alpha = 0.8f),
-                    fontSize = UiTokens.fsSmall
+                    fontSize = UiTokens.fsNormal
                 )
             }
             memoDetailsLine(item)?.let {
                 Text(
                     text = it,
                     color = if (isToday || item.reminderType != 0) androidx.compose.ui.graphics.Color.Red else palette.clText.copy(alpha = 0.84f),
-                    fontSize = UiTokens.fsSmall
+                    fontSize = UiTokens.fsNormal
                 )
             }
             if (item.photoCount > 0) {
                 Text(
                     text = item.photoCount.toString(),
                     color = palette.clText.copy(alpha = 0.72f),
-                    fontSize = UiTokens.fsSmall
+                    fontSize = UiTokens.fsNormal
                 )
+            }
             }
         }
     }
@@ -321,7 +339,7 @@ private fun MemoNavigationRow(
                     Text(
                         text = it,
                         color = palette.clText.copy(alpha = 0.82f),
-                        fontSize = UiTokens.fsSmall
+                        fontSize = UiTokens.fsNormal
                     )
                 }
             }

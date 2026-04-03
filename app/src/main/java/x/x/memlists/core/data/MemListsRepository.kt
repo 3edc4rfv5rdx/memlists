@@ -193,6 +193,13 @@ class MemListsRepository(
         databaseHelper.writableDatabase.insertOrThrow("items", null, values)
     }
 
+    suspend fun toggleMemoActive(id: Long, currentActive: Boolean) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            put("active", if (currentActive) 0 else 1)
+        }
+        databaseHelper.writableDatabase.update("items", values, "id = ?", arrayOf(id.toString()))
+    }
+
     suspend fun loadKnownTags(): List<String> = withContext(Dispatchers.IO) {
         val tags = linkedSetOf<String>()
         databaseHelper.readableDatabase.query(

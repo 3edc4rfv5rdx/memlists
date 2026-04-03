@@ -6,6 +6,13 @@
 - N Full reminder editor: one-time/daily/period types with time presets, day-of-week mask, yearly/monthly/auto-remove options, and validation via orange snackbar
 - F Theme-aware date and time pickers: accent color, header styling, rounded buttons, larger day font, and selected-day text color per theme
 - F Compact reminder section: tighter radio buttons and checkboxes, centered Morning/Day/Evening presets with time subtitles
+- F Daily times: sorted display, add via +, remove via x on each chip, theme-colored time buttons
+- F Day-of-week: compact 2-letter chips in one row, Every day/Weekdays toggle their group without affecting other days
+- F Period dates accept both full date (YYYY-MM-DD) and day-of-month (1-31), with same-format validation
+- N Active checkbox on home screen for reminder items, toggles active state in DB
+- F Snackbar: black text on orange, configurable colors via ScreenScaffold params
+- F Tags # button visible with theme colors; all fonts default to fsNormal (16sp) across all screens
+- F Spec updated: Normal (16) is the default font size
 - F Show only one-time reminders on the main memos screen, keep `Notes` items inside their folder, and hide the empty-root message when records still exist in folders
 - F Tighten and restyle the first item editor: fix text clipping, reduce field heights and spacing, make the minus priority button react to value, and align the priority row compactly
 - F Use theme-derived colors for the main floating action buttons and switch emulator installs to the uninstall-then-install workflow

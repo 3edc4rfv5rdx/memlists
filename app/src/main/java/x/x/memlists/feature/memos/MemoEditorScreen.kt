@@ -7,15 +7,19 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -129,8 +133,8 @@ fun MemoEditorScreen(
             }
             val parsedReminderTime = reminderTimeText.toDbTimeInt()
             val parsedDailyTimes = dailyTimes.mapNotNull { it.toDbTimeInt() }
-            val parsedPeriodFrom = periodFromText.toDbDateInt()
-            val parsedPeriodTo = periodToText.toDbDateInt()
+            val parsedPeriodFrom = periodFromText.toPeriodInt()
+            val parsedPeriodTo = periodToText.toPeriodInt()
 
             if (!remindersEnabled && dateText.isNotBlank() && parsedDate == null) {
                 showValidation(lw("Date format is invalid"))
@@ -146,6 +150,14 @@ fun MemoEditorScreen(
                 showValidation(lw("From date is required"))
             } else if (remindersEnabled && reminderType == ReminderType.Period && parsedPeriodTo == null) {
                 showValidation(lw("To date is required"))
+            } else if (
+                remindersEnabled &&
+                reminderType == ReminderType.Period &&
+                parsedPeriodFrom != null &&
+                parsedPeriodTo != null &&
+                isPeriodDayOfMonth(parsedPeriodFrom) != isPeriodDayOfMonth(parsedPeriodTo)
+            ) {
+                showValidation(lw("Both dates must be same format"))
             } else if (remindersEnabled && reminderType == ReminderType.Period && parsedReminderTime == null) {
                 showValidation(lw("Reminder time is required"))
             } else if (
@@ -453,11 +465,17 @@ private fun TagsActions(
     onOpenDictionary: () -> Unit,
     onClear: () -> Unit
 ) {
+    val palette = LocalAppThemePalette.current
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextButton(onClick = onOpenDictionary) {
-            Text("#")
+            Text(
+                text = "#",
+                color = palette.clText,
+                fontSize = UiTokens.fsLarge,
+                fontWeight = FontWeight.Bold
+            )
         }
         IconButton(
             onClick = onClear,
@@ -620,7 +638,7 @@ private fun ReminderSection(
                             label = lw("From"),
                             lw = lw,
                             pickerContext = pickerContext,
-                            onValueChange = { onPeriodFromChange(normalizeDateInput(it)) },
+                            onValueChange = { onPeriodFromChange(normalizePeriodInput(it)) },
                             onClear = { onPeriodFromChange("") }
                         )
                         DateInputField(
@@ -628,7 +646,7 @@ private fun ReminderSection(
                             label = lw("To"),
                             lw = lw,
                             pickerContext = pickerContext,
-                            onValueChange = { onPeriodToChange(normalizeDateInput(it)) },
+                            onValueChange = { onPeriodToChange(normalizePeriodInput(it)) },
                             onClear = { onPeriodToChange("") }
                         )
                         TimeInputField(
@@ -806,7 +824,7 @@ private fun ReminderPresetButton(
             if (subtitle != null) {
                 Text(
                     text = subtitle,
-                    fontSize = UiTokens.fsSmall
+                    fontSize = UiTokens.fsNormal
                 )
             }
         }
@@ -822,11 +840,11 @@ private fun DailyTimesEditor(
     onRemoveTime: (String) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
+    val sortedTimes = times.sortedBy { it.replace(":", "").toIntOrNull() ?: 0 }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
                 text = lw("Times"),
@@ -834,7 +852,7 @@ private fun DailyTimesEditor(
                 fontSize = UiTokens.fsNormal,
                 fontWeight = FontWeight.Bold
             )
-            Button(
+            FilledIconButton(
                 onClick = {
                     val initial = parseTimeOrDefault(times.lastOrNull())
                     val dialog = TimePickerDialog(
@@ -850,35 +868,46 @@ private fun DailyTimesEditor(
                     stylePickerDialog(dialog, palette)
                     dialog.show()
                 },
-                shape = UiTokens.shapeMedium,
-                colors = ButtonDefaults.buttonColors(
+                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
                     containerColor = palette.clUpBar,
                     contentColor = palette.clText
                 )
             ) {
-                Text(lw("Add time"))
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = lw("Add time")
+                )
             }
         }
-        if (times.isEmpty()) {
+        if (sortedTimes.isEmpty()) {
             Text(
                 text = lw("No times yet"),
                 color = palette.clText.copy(alpha = 0.75f),
-                fontSize = UiTokens.fsSmall
+                fontSize = UiTokens.fsNormal
             )
         } else {
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                times.forEach { time ->
+                sortedTimes.forEach { time ->
                     Button(
-                        onClick = { onRemoveTime(time) },
+                        onClick = { /* TODO: edit time */ },
                         shape = UiTokens.shapeMedium,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = palette.clMenu,
+                            containerColor = palette.clUpBar,
                             contentColor = palette.clText
-                        )
+                        ),
+                        contentPadding = PaddingValues(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
                     ) {
-                        Text(time)
+                        Text(time, fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = lw("Remove"),
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable { onRemoveTime(time) },
+                            tint = palette.clText.copy(alpha = 0.6f)
+                        )
                     }
                 }
             }
@@ -897,20 +926,31 @@ private fun DaysMaskEditor(
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ReminderPresetButton(text = lw("Every day")) { onDaysMaskChange(127) }
-            ReminderPresetButton(text = lw("Weekdays")) { onDaysMaskChange(31) }
-            ReminderPresetButton(text = lw("Weekend")) { onDaysMaskChange(96) }
+            ReminderPresetButton(text = lw("Every day")) {
+                onDaysMaskChange(if (daysMask == 127) 0 else 127)
+            }
+            ReminderPresetButton(text = lw("Weekdays")) {
+                val weekdays = 31 // bits 0-4: Mon-Fri
+                onDaysMaskChange(
+                    if (daysMask and weekdays == weekdays) {
+                        daysMask and weekdays.inv() // turn off Mon-Fri, keep Sat/Sun
+                    } else {
+                        daysMask or weekdays // turn on Mon-Fri, keep Sat/Sun
+                    }
+                )
+            }
         }
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            DayMaskChip(lw("Mon"), 0, daysMask, palette, onDaysMaskChange)
-            DayMaskChip(lw("Tue"), 1, daysMask, palette, onDaysMaskChange)
-            DayMaskChip(lw("Wed"), 2, daysMask, palette, onDaysMaskChange)
-            DayMaskChip(lw("Thu"), 3, daysMask, palette, onDaysMaskChange)
-            DayMaskChip(lw("Fri"), 4, daysMask, palette, onDaysMaskChange)
-            DayMaskChip(lw("Sat"), 5, daysMask, palette, onDaysMaskChange)
-            DayMaskChip(lw("Sun"), 6, daysMask, palette, onDaysMaskChange)
+            DayMaskChip(lw("Mo"), 0, daysMask, palette, onDaysMaskChange)
+            DayMaskChip(lw("Tu"), 1, daysMask, palette, onDaysMaskChange)
+            DayMaskChip(lw("We"), 2, daysMask, palette, onDaysMaskChange)
+            DayMaskChip(lw("Th"), 3, daysMask, palette, onDaysMaskChange)
+            DayMaskChip(lw("Fr"), 4, daysMask, palette, onDaysMaskChange)
+            DayMaskChip(lw("Sa"), 5, daysMask, palette, onDaysMaskChange)
+            DayMaskChip(lw("Su"), 6, daysMask, palette, onDaysMaskChange)
         }
     }
 }
@@ -939,9 +979,11 @@ private fun DayMaskChip(
         colors = ButtonDefaults.buttonColors(
             containerColor = if (selected) palette.clUpBar else palette.clMenu,
             contentColor = palette.clText
-        )
+        ),
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+        modifier = Modifier.width(44.dp)
     ) {
-        Text(text)
+        Text(text, fontSize = UiTokens.fsNormal)
     }
 }
 
@@ -1088,10 +1130,32 @@ private fun normalizeTimeInput(text: String): String {
     }
 }
 
+/** Period input: day-of-month (1-2 digits) or full date (formatted as YYYY-MM-DD). */
+private fun normalizePeriodInput(text: String): String {
+    val digits = text.filter(Char::isDigit)
+    return if (digits.length <= 2) {
+        digits
+    } else {
+        normalizeDateInput(text)
+    }
+}
+
 private fun String.toDbDateInt(): Int? {
     val digits = filter(Char::isDigit)
     return if (digits.length == 8) digits.toIntOrNull() else null
 }
+
+/** Parse period field: full date (8 digits → YYYYMMDD) or day-of-month (1-2 digits → 1..31). */
+private fun String.toPeriodInt(): Int? {
+    val digits = trim().filter(Char::isDigit)
+    return when (digits.length) {
+        in 1..2 -> digits.toIntOrNull()?.takeIf { it in 1..31 }
+        8 -> digits.toIntOrNull()
+        else -> null
+    }
+}
+
+private fun isPeriodDayOfMonth(value: Int): Boolean = value in 1..31
 
 private fun String.toDbTimeInt(): Int? {
     val digits = filter(Char::isDigit)

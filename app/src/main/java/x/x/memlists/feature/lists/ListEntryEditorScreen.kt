@@ -88,7 +88,7 @@ fun ListEntryEditorScreen(
                         Text(
                             text = it,
                             color = palette.clText,
-                            fontSize = UiTokens.fsSmall
+                            fontSize = UiTokens.fsNormal
                         )
                     }
                     PrimaryActionButton(

@@ -58,6 +58,8 @@ fun ScreenScaffold(
     onNavigateBack: () -> Unit,
     floatingActionButton: @Composable () -> Unit = {},
     snackbarHostState: SnackbarHostState? = null,
+    snackbarColor: androidx.compose.ui.graphics.Color? = null,
+    snackbarTextColor: androidx.compose.ui.graphics.Color? = null,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -70,8 +72,8 @@ fun ScreenScaffold(
                 SnackbarHost(hostState = snackbarHostState) { data ->
                     androidx.compose.material3.Snackbar(
                         snackbarData = data,
-                        containerColor = androidx.compose.ui.graphics.Color(0xFFF29238),
-                        contentColor = androidx.compose.ui.graphics.Color.White
+                        containerColor = snackbarColor ?: androidx.compose.ui.graphics.Color(0xFFF29238),
+                        contentColor = snackbarTextColor ?: androidx.compose.ui.graphics.Color.Black
                     )
                 }
             }
@@ -277,7 +279,7 @@ fun SettingSwitchCard(
                 )
                 Text(
                     text = body,
-                    fontSize = UiTokens.fsSmall,
+                    fontSize = UiTokens.fsNormal,
                     color = palette.clText.copy(alpha = 0.8f)
                 )
             }

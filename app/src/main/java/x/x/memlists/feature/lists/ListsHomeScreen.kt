@@ -196,14 +196,14 @@ private fun ListContainerCard(
                     Text(
                         text = it,
                         color = palette.clText.copy(alpha = 0.8f),
-                        fontSize = UiTokens.fsSmall
+                        fontSize = UiTokens.fsNormal
                     )
                 }
                 if (!container.isFolder) {
                     Text(
                         text = "${container.uncheckedCount}/${container.totalCount}",
                         color = palette.clText.copy(alpha = 0.75f),
-                        fontSize = UiTokens.fsSmall
+                        fontSize = UiTokens.fsNormal
                     )
                 }
             }

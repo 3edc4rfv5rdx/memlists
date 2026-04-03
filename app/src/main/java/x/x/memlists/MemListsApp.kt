@@ -7,6 +7,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -81,6 +83,8 @@ fun MemListsApp() {
                 )
             }
             composable(Routes.Memos) {
+                val memosApplication = LocalContext.current.applicationContext as MemListsApplication
+                val memosScope = rememberCoroutineScope()
                 val memosViewModel: MemosViewModel = viewModel()
                 val memosUiState by memosViewModel.uiState.collectAsState()
                 val refreshHandle = navController.currentBackStackEntry?.savedStateHandle
@@ -117,6 +121,12 @@ fun MemListsApp() {
                     },
                     onCloseRoot = {
                         activity?.finish()
+                    },
+                    onToggleActive = { item ->
+                        memosScope.launch {
+                            memosApplication.repository.toggleMemoActive(item.id, item.active)
+                            memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                        }
                     }
                 )
             }

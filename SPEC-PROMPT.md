@@ -22,8 +22,9 @@ You are building a mobile application called **MemLists** — a combined app tha
 
 ### 1.2 Shared UI Constants
 
-**Font sizes:** Small=14, Normal=16, Medium=18, Large=20, Title=24.
+**Font sizes:** Small=14, Normal=16 (default), Medium=18, Large=20, Title=24.
 **Font weights:** Normal, Bold.
+**Default font size:** All UI text uses Normal (16) unless explicitly specified otherwise.
 **Buttons:** All dialog and picker buttons must have a background color and rounded corners.
 **Color variables (applied from current theme):**
 - `clText` — text color

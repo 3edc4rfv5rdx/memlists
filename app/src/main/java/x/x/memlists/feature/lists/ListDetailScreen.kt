@@ -179,7 +179,7 @@ private fun ListEntryCard(
                     Text(
                         text = quantityLine,
                         color = palette.clText.copy(alpha = 0.75f),
-                        fontSize = UiTokens.fsSmall
+                        fontSize = UiTokens.fsNormal
                     )
                 }
             }
