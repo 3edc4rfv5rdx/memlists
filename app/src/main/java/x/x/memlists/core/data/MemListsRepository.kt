@@ -139,7 +139,18 @@ class MemListsRepository(
         content: String?,
         tags: String?,
         priority: Int,
-        date: Int?
+        date: Int?,
+        reminderType: Int,
+        active: Boolean,
+        time: Int?,
+        timesJson: String?,
+        dateTo: Int?,
+        daysMask: Int?,
+        fullscreen: Boolean,
+        loopSound: Boolean,
+        yearly: Boolean,
+        monthly: Boolean,
+        remove: Boolean
     ): Long = withContext(Dispatchers.IO) {
         val values = ContentValues().apply {
             put("title", title)
@@ -148,23 +159,35 @@ class MemListsRepository(
             put("priority", priority)
             put("created", todayAsInt())
             put("hidden", 0)
-            put("reminder_type", 0)
-            put("active", 1)
+            put("reminder_type", reminderType)
+            put("active", if (active) 1 else 0)
             if (date == null) {
                 putNull("date")
             } else {
                 put("date", date)
             }
-            putNull("time")
-            putNull("times")
-            putNull("date_to")
-            putNull("days_mask")
+            if (time == null) {
+                putNull("time")
+            } else {
+                put("time", time)
+            }
+            put("times", timesJson)
+            if (dateTo == null) {
+                putNull("date_to")
+            } else {
+                put("date_to", dateTo)
+            }
+            if (daysMask == null) {
+                putNull("days_mask")
+            } else {
+                put("days_mask", daysMask)
+            }
             putNull("sound")
-            put("fullscreen", 0)
-            put("loop_sound", 1)
-            put("yearly", 0)
-            put("monthly", 0)
-            put("remove", 0)
+            put("fullscreen", if (fullscreen) 1 else 0)
+            put("loop_sound", if (loopSound) 1 else 0)
+            put("yearly", if (yearly) 1 else 0)
+            put("monthly", if (monthly) 1 else 0)
+            put("remove", if (remove) 1 else 0)
             putNull("period_done_until")
         }
         databaseHelper.writableDatabase.insertOrThrow("items", null, values)

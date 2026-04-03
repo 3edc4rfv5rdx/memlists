@@ -30,6 +30,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -55,6 +57,7 @@ fun ScreenScaffold(
     navigationButtonMode: NavigationButtonMode = NavigationButtonMode.None,
     onNavigateBack: () -> Unit,
     floatingActionButton: @Composable () -> Unit = {},
+    snackbarHostState: SnackbarHostState? = null,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -62,6 +65,17 @@ fun ScreenScaffold(
     Scaffold(
         containerColor = palette.clBgrnd,
         floatingActionButton = floatingActionButton,
+        snackbarHost = {
+            if (snackbarHostState != null) {
+                SnackbarHost(hostState = snackbarHostState) { data ->
+                    androidx.compose.material3.Snackbar(
+                        snackbarData = data,
+                        containerColor = androidx.compose.ui.graphics.Color(0xFFF29238),
+                        contentColor = androidx.compose.ui.graphics.Color.White
+                    )
+                }
+            }
+        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {

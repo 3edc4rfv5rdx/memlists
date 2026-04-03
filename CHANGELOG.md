@@ -3,6 +3,9 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N Full reminder editor: one-time/daily/period types with time presets, day-of-week mask, yearly/monthly/auto-remove options, and validation via orange snackbar
+- F Theme-aware date and time pickers: accent color, header styling, rounded buttons, larger day font, and selected-day text color per theme
+- F Compact reminder section: tighter radio buttons and checkboxes, centered Morning/Day/Evening presets with time subtitles
 - F Show only one-time reminders on the main memos screen, keep `Notes` items inside their folder, and hide the empty-root message when records still exist in folders
 - F Tighten and restyle the first item editor: fix text clipping, reduce field heights and spacing, make the minus priority button react to value, and align the priority row compactly
 - F Use theme-derived colors for the main floating action buttons and switch emulator installs to the uninstall-then-install workflow

@@ -156,7 +156,7 @@ fun MemosHomeScreen(
                 item {
                     MemoNavigationRow(
                         title = lw("Lists"),
-                        subtitle = lw("Folders and lists"),
+                        subtitle = null,
                         palette = palette,
                         onClick = onOpenLists
                     )

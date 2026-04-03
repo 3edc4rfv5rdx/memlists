@@ -3,4 +3,46 @@
         <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <!-- Day number text: larger + theme-colored -->
+    <style name="PickerDayText.Light" parent="android:TextAppearance.Material">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">#000000</item>
+    </style>
+    <style name="PickerDayText.Dark" parent="android:TextAppearance.Material">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
+    <!-- CalendarView inside DatePicker: controls day numbers -->
+    <style name="PickerCalendar.Light" parent="android:Widget.Material.Light.CalendarView">
+        <item name="android:dateTextAppearance">@style/PickerDayText.Light</item>
+        <item name="android:weekDayTextAppearance">@style/PickerDayText.Light</item>
+    </style>
+    <style name="PickerCalendar.Dark" parent="android:Widget.Material.CalendarView">
+        <item name="android:dateTextAppearance">@style/PickerDayText.Dark</item>
+        <item name="android:weekDayTextAppearance">@style/PickerDayText.Dark</item>
+    </style>
+
+    <!-- Picker dialog themes -->
+    <style name="PickerTheme.Light" parent="android:Theme.Material.Light.Dialog">
+        <item name="android:colorAccent">#E6C94C</item>
+        <item name="android:textColorPrimaryInverse">#000000</item>
+        <item name="android:calendarViewStyle">@style/PickerCalendar.Light</item>
+    </style>
+    <style name="PickerTheme.Dark" parent="android:Theme.Material.Dialog">
+        <item name="android:colorAccent">#616161</item>
+        <item name="android:textColorPrimaryInverse">#FFFFFF</item>
+        <item name="android:calendarViewStyle">@style/PickerCalendar.Dark</item>
+    </style>
+    <style name="PickerTheme.Blue" parent="android:Theme.Material.Light.Dialog">
+        <item name="android:colorAccent">#2196F3</item>
+        <item name="android:textColorPrimaryInverse">#000000</item>
+        <item name="android:calendarViewStyle">@style/PickerCalendar.Light</item>
+    </style>
+    <style name="PickerTheme.Green" parent="android:Theme.Material.Light.Dialog">
+        <item name="android:colorAccent">#97BA60</item>
+        <item name="android:textColorPrimaryInverse">#000000</item>
+        <item name="android:calendarViewStyle">@style/PickerCalendar.Light</item>
+    </style>
 </resources>

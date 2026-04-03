@@ -124,6 +124,7 @@ fun MemListsApp() {
                 val application = LocalContext.current.applicationContext as MemListsApplication
                 MemoEditorScreen(
                     application = application,
+                    languageCode = uiState.settings.languageCode,
                     lw = lw,
                     onNavigateBack = { navController.popBackStack() },
                     onSaved = {
