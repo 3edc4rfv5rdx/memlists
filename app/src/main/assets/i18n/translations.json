@@ -1,5 +1,8 @@
 {
-  "MemLists": { "ru": "MemLists", "ua": "MemLists" },
+  "MemLists": { 
+    "ru": "MemLists", 
+    "ua": "MemLists" 
+    },
   "Welcome": { "ru": "Добро пожаловать", "ua": "Ласкаво просимо" },
   "Welcome to MemLists": { "ru": "Добро пожаловать в MemLists", "ua": "Ласкаво просимо до MemLists" },
   "Combined memos and universal lists": { "ru": "Объединенные заметки и универсальные списки", "ua": "Об'єднані нотатки та універсальні списки" },

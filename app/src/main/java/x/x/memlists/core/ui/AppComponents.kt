@@ -71,10 +71,15 @@ fun ScreenScaffold(
             if (snackbarHostState != null) {
                 SnackbarHost(hostState = snackbarHostState) { data ->
                     androidx.compose.material3.Snackbar(
-                        snackbarData = data,
                         containerColor = snackbarColor ?: androidx.compose.ui.graphics.Color(0xFFF29238),
                         contentColor = snackbarTextColor ?: androidx.compose.ui.graphics.Color.Black
-                    )
+                    ) {
+                        Text(
+                            text = data.visuals.message,
+                            fontSize = UiTokens.fsMedium,
+                            fontWeight = UiTokens.fwBold
+                        )
+                    }
                 }
             }
         },
