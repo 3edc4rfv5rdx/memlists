@@ -26,7 +26,7 @@ class AppLocalizer(
     )
 
     private val translations: Map<String, TranslationRecord> by lazy {
-        context.assets.open("i18n/translations.json").bufferedReader().use { reader ->
+        context.assets.open("i18n.json").bufferedReader().use { reader ->
             val type = object : TypeToken<Map<String, TranslationRecord>>() {}.type
             gson.fromJson<Map<String, TranslationRecord>>(reader, type).orEmpty()
         }

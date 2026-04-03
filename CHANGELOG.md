@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- R Move i18n/translations.json → assets/i18n.json (reformatted multi-line) and theme/themes.json → assets/themes.json; remove empty subdirs
 - N About dialog with app icon, version, build, author, github, email, copyright; accessible from main menu
 - F Snackbar text: increase font to fsMedium (18sp) bold; add fwNormal/fwBold tokens to UiTokens
 - N Full reminder editor: one-time/daily/period types with time presets, day-of-week mask, yearly/monthly/auto-remove options, and validation via orange snackbar

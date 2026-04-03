@@ -22,7 +22,7 @@ class ThemeRepository(
     private val gson = Gson()
 
     val themes: List<AppThemePalette> by lazy {
-        context.assets.open("theme/themes.json").bufferedReader().use { reader ->
+        context.assets.open("themes.json").bufferedReader().use { reader ->
             val type = object : TypeToken<List<ThemeRecord>>() {}.type
             gson.fromJson<List<ThemeRecord>>(reader, type).orEmpty().map { record ->
                 AppThemePalette(
