@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N About dialog with app icon, version/build number, and copyright; accessible from main menu
 - F Snackbar text: increase font to fsMedium (18sp) bold; add fwNormal/fwBold tokens to UiTokens
 - N Full reminder editor: one-time/daily/period types with time presets, day-of-week mask, yearly/monthly/auto-remove options, and validation via orange snackbar
 - F Theme-aware date and time pickers: accent color, header styling, rounded buttons, larger day font, and selected-day text color per theme

@@ -71,6 +71,15 @@ fun MemosHomeScreen(
         items
     }
     var menuExpanded by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
+    if (showAbout) {
+        x.x.memlists.core.ui.AboutDialog(
+            lw = lw,
+            versionName = x.x.memlists.BuildConfig.VERSION_NAME,
+            versionCode = x.x.memlists.BuildConfig.VERSION_CODE,
+            onDismiss = { showAbout = false }
+        )
+    }
     ScreenScaffold(
         title = lw(selectedFolder?.titleKey ?: "MemLists"),
         navigationButtonMode = if (selectedFolder == null) NavigationButtonMode.Close else NavigationButtonMode.Back,
@@ -142,8 +151,10 @@ fun MemosHomeScreen(
                 )
                 DropdownMenuItem(
                     text = { Text(lw("About")) },
-                    onClick = { menuExpanded = false },
-                    enabled = false
+                    onClick = {
+                        menuExpanded = false
+                        showAbout = true
+                    }
                 )
             }
         }

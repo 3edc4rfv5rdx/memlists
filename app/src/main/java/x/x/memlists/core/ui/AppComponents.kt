@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -340,4 +341,72 @@ fun LoadingScreen() {
 @Composable
 fun SpacerBlock() {
     Spacer(modifier = Modifier.height(4.dp))
+}
+
+@Composable
+fun AboutDialog(
+    lw: (String) -> String,
+    versionName: String,
+    versionCode: Int,
+    onDismiss: () -> Unit
+) {
+    val palette = LocalAppThemePalette.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = palette.clFill,
+        title = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ViewList,
+                    contentDescription = "MemLists",
+                    modifier = Modifier.size(64.dp),
+                    tint = palette.clUpBar
+                )
+                Text(
+                    text = "MemLists",
+                    fontSize = UiTokens.fsTitle,
+                    fontWeight = UiTokens.fwBold,
+                    color = palette.clText
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "${lw("Version")}: $versionName (build $versionCode)",
+                    fontSize = UiTokens.fsNormal,
+                    color = palette.clText
+                )
+                Text(
+                    text = "© 2026",
+                    fontSize = UiTokens.fsSmall,
+                    color = palette.clText.copy(alpha = 0.7f)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                shape = UiTokens.shapeMedium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = palette.clUpBar,
+                    contentColor = palette.clText
+                )
+            ) {
+                Text(
+                    text = lw("OK"),
+                    fontSize = UiTokens.fsNormal,
+                    fontWeight = UiTokens.fwBold
+                )
+            }
+        }
+    )
 }
