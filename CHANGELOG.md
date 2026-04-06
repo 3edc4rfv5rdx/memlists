@@ -3,6 +3,10 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N Sound picker in reminder editor: per-item sound override with system/custom sounds, play/stop, file import
+- R Extract shared SoundPickerComponents (SoundPickerRow, SoundPickerCard, loadCustomSounds) from SettingsScreen into core/ui
+- F Reminder shared controls (fullscreen, loop sound, sound picker) moved before type-specific options
+- F Radio buttons colored to match theme text; day-of-week chips as circles with text-colored border
 - F Tighten settings layout: reduce spacing between items to 2dp, shrink card padding
 - F Settings overhaul: dropdown selectors for language/theme, compact fields, time presets (morning/day/evening) stored in DB and used in reminder editor, default sound picker with system sounds and custom file import, play/stop playback
 - R Extract picker utils (pickerThemeResId, stylePickerDialog, parseTimeOrDefault, formatPickerTime) into shared PickerUtils.kt; add CompactOutlinedField and SoundHelper

@@ -152,6 +152,7 @@ class MemListsRepository(
         timesJson: String?,
         dateTo: Int?,
         daysMask: Int?,
+        soundUri: String?,
         fullscreen: Boolean,
         loopSound: Boolean,
         yearly: Boolean,
@@ -188,7 +189,11 @@ class MemListsRepository(
             } else {
                 put("days_mask", daysMask)
             }
-            putNull("sound")
+            if (soundUri == null) {
+                putNull("sound")
+            } else {
+                put("sound", soundUri)
+            }
             put("fullscreen", if (fullscreen) 1 else 0)
             put("loop_sound", if (loopSound) 1 else 0)
             put("yearly", if (yearly) 1 else 0)

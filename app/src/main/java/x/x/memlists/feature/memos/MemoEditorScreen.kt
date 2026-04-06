@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,6 +78,15 @@ import x.x.memlists.core.ui.parseTimeOrDefault
 import x.x.memlists.core.ui.pickerThemeResId
 import x.x.memlists.core.ui.stylePickerDialog
 import x.x.memlists.R
+import x.x.memlists.core.sound.SoundHelper
+import x.x.memlists.core.sound.SoundItem
+import x.x.memlists.core.ui.SoundPickerRow
+import x.x.memlists.core.ui.loadCustomSounds
+import androidx.compose.runtime.DisposableEffect
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import java.io.File
 
 @Composable
 fun MemoEditorScreen(
@@ -114,9 +125,42 @@ fun MemoEditorScreen(
     var monthlyRepeat by remember { mutableStateOf(false) }
     var autoRemove by remember { mutableStateOf(false) }
     var daysMask by remember { mutableIntStateOf(0) }
+    var soundUri by remember { mutableStateOf<String?>(null) }
+    var playingUri by remember { mutableStateOf<String?>(null) }
+    val soundHelper = remember { SoundHelper(context) }
+    val systemSounds = remember { soundHelper.getSystemSounds() }
+    val soundsDir = remember {
+        File(context.filesDir, "Sounds").also { it.mkdirs() }
+    }
+    var customSounds by remember { mutableStateOf(loadCustomSounds(soundsDir)) }
+
+    soundHelper.onPlaybackComplete = { playingUri = null }
+
+    val soundFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val fileName = "sound-${System.currentTimeMillis()}.mp3"
+            val destFile = File(soundsDir, fileName)
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                customSounds = loadCustomSounds(soundsDir)
+                soundUri = destFile.absolutePath
+            } catch (_: Exception) {}
+        }
+    }
+
     var canSave by remember { mutableStateOf(true) }
     var tagDialogVisible by remember { mutableStateOf(false) }
     val knownTags = remember { mutableStateListOf<String>() }
+
+    DisposableEffect(Unit) {
+        onDispose { soundHelper.release() }
+    }
 
     LaunchedEffect(Unit) {
         knownTags.clear()
@@ -198,6 +242,7 @@ fun MemoEditorScreen(
                         },
                         dateTo = if (remindersEnabled && reminderType == ReminderType.Period) parsedPeriodTo else null,
                         daysMask = if (remindersEnabled && reminderType != ReminderType.OneTime) daysMask else null,
+                        soundUri = if (remindersEnabled) soundUri else null,
                         fullscreen = remindersEnabled && fullscreenAlert,
                         loopSound = remindersEnabled && if (fullscreenAlert) loopSound else true,
                         yearly = remindersEnabled && reminderType == ReminderType.OneTime && yearlyRepeat,
@@ -348,6 +393,20 @@ fun MemoEditorScreen(
                         onPeriodFromChange = { periodFromText = it },
                         onPeriodToChange = { periodToText = it },
                         onDaysMaskChange = { daysMask = it },
+                        soundUri = soundUri,
+                        systemSounds = systemSounds,
+                        customSounds = customSounds,
+                        playingUri = playingUri,
+                        onSoundSelected = { soundUri = it },
+                        onPlay = { uri ->
+                            playingUri = uri
+                            soundHelper.play(uri)
+                        },
+                        onStop = {
+                            playingUri = null
+                            soundHelper.stop()
+                        },
+                        onPickSoundFile = { soundFilePicker.launch("audio/*") },
                         onFullscreenAlertChange = { fullscreenAlert = it },
                         onLoopSoundChange = { loopSound = it },
                         onYearlyRepeatChange = { yearlyRepeat = it },
@@ -528,6 +587,14 @@ private fun ReminderSection(
     onPeriodFromChange: (String) -> Unit,
     onPeriodToChange: (String) -> Unit,
     onDaysMaskChange: (Int) -> Unit,
+    soundUri: String?,
+    systemSounds: List<SoundItem>,
+    customSounds: List<SoundItem>,
+    playingUri: String?,
+    onSoundSelected: (String?) -> Unit,
+    onPlay: (String) -> Unit,
+    onStop: () -> Unit,
+    onPickSoundFile: () -> Unit,
     onFullscreenAlertChange: (Boolean) -> Unit,
     onLoopSoundChange: (Boolean) -> Unit,
     onYearlyRepeatChange: (Boolean) -> Unit,
@@ -566,7 +633,11 @@ private fun ReminderSection(
                             RadioButton(
                                 selected = reminderType == type,
                                 onClick = { onReminderTypeChange(type) },
-                                modifier = Modifier.padding(0.dp)
+                                modifier = Modifier.padding(0.dp),
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = palette.clText,
+                                    unselectedColor = palette.clText
+                                )
                             )
                             Text(
                                 text = lw(type.labelKey),
@@ -576,6 +647,30 @@ private fun ReminderSection(
                         }
                     }
                 }
+                ToggleRow(
+                    checked = fullscreenAlert,
+                    text = lw("Fullscreen alert"),
+                    onCheckedChange = onFullscreenAlertChange
+                )
+                if (fullscreenAlert) {
+                    ToggleRow(
+                        checked = loopSound,
+                        text = lw("Loop sound"),
+                        onCheckedChange = onLoopSoundChange
+                    )
+                }
+                SoundPickerRow(
+                    lw = lw,
+                    currentUri = soundUri,
+                    systemSounds = systemSounds,
+                    customSounds = customSounds,
+                    playingUri = playingUri,
+                    onSoundSelected = onSoundSelected,
+                    onPlay = onPlay,
+                    onStop = onStop,
+                    onPickFile = onPickSoundFile,
+                    palette = palette
+                )
                 when (reminderType) {
                     ReminderType.OneTime -> {
                         TimeInputField(
@@ -593,18 +688,6 @@ private fun ReminderSection(
                             timeEvening = timeEvening,
                             onSelect = onReminderTimeChange
                         )
-                        ToggleRow(
-                            checked = fullscreenAlert,
-                            text = lw("Fullscreen alert"),
-                            onCheckedChange = onFullscreenAlertChange
-                        )
-                        if (fullscreenAlert) {
-                            ToggleRow(
-                                checked = loopSound,
-                                text = lw("Loop sound"),
-                                onCheckedChange = onLoopSoundChange
-                            )
-                        }
                         ToggleRow(
                             checked = monthlyRepeat,
                             text = lw("Monthly repeat"),
@@ -635,18 +718,6 @@ private fun ReminderSection(
                             lw = lw,
                             onDaysMaskChange = onDaysMaskChange
                         )
-                        ToggleRow(
-                            checked = fullscreenAlert,
-                            text = lw("Fullscreen alert"),
-                            onCheckedChange = onFullscreenAlertChange
-                        )
-                        if (fullscreenAlert) {
-                            ToggleRow(
-                                checked = loopSound,
-                                text = lw("Loop sound"),
-                                onCheckedChange = onLoopSoundChange
-                            )
-                        }
                     }
                     ReminderType.Period -> {
                         DateInputField(
@@ -685,18 +756,6 @@ private fun ReminderSection(
                             lw = lw,
                             onDaysMaskChange = onDaysMaskChange
                         )
-                        ToggleRow(
-                            checked = fullscreenAlert,
-                            text = lw("Fullscreen alert"),
-                            onCheckedChange = onFullscreenAlertChange
-                        )
-                        if (fullscreenAlert) {
-                            ToggleRow(
-                                checked = loopSound,
-                                text = lw("Loop sound"),
-                                onCheckedChange = onLoopSoundChange
-                            )
-                        }
                     }
                 }
             }
@@ -997,15 +1056,16 @@ private fun DayMaskChip(
                 }
             )
         },
-        shape = UiTokens.shapeMedium,
+        shape = CircleShape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) palette.clUpBar else palette.clMenu,
+            containerColor = if (selected) palette.clUpBar else Color.Transparent,
             contentColor = palette.clText
         ),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-        modifier = Modifier.width(44.dp)
+        border = BorderStroke(1.dp, palette.clText),
+        contentPadding = PaddingValues(0.dp),
+        modifier = Modifier.size(38.dp)
     ) {
-        Text(text, fontSize = UiTokens.fsNormal)
+        Text(text, fontSize = UiTokens.fsSmall)
     }
 }
 
