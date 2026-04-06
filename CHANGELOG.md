@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N Wire ReminderScheduler into MemoEditorScreen: schedule alarm after saving a reminder item
 - N ReminderReceiver: handle fired alarms (specific, daily, period, snoozed, stop-sound), show notification or launch fullscreen, reschedule recurring
 - N ReminderScheduler: schedule/cancel/reschedule alarms for one-time, daily, period, and snooze reminders via AlarmManager.setAlarmClock
 - I Reminder infrastructure: notification channels, SoundUtils, ReminderSoundService (foreground), IntentExtras, repository query methods, permissions

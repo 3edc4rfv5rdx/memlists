@@ -82,6 +82,7 @@ import x.x.memlists.core.sound.SoundHelper
 import x.x.memlists.core.sound.SoundItem
 import x.x.memlists.core.ui.SoundPickerRow
 import x.x.memlists.core.ui.loadCustomSounds
+import x.x.memlists.core.reminder.ReminderScheduler
 import androidx.compose.runtime.DisposableEffect
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -222,7 +223,7 @@ fun MemoEditorScreen(
             } else {
                 canSave = false
                 scope.launch {
-                    application.repository.insertMemo(
+                    val itemId = application.repository.insertMemo(
                         title = trimmedTitle,
                         content = content.trim().ifBlank { null },
                         tags = tags.trim().ifBlank { null },
@@ -249,6 +250,9 @@ fun MemoEditorScreen(
                         monthly = remindersEnabled && reminderType == ReminderType.OneTime && monthlyRepeat,
                         remove = remindersEnabled && reminderType == ReminderType.OneTime && autoRemove && !yearlyRepeat && !monthlyRepeat
                     )
+                    if (remindersEnabled && itemId > 0) {
+                        ReminderScheduler.scheduleItem(context, application.repository, itemId)
+                    }
                     canSave = true
                     onSaved()
                 }
