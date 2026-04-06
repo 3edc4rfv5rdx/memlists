@@ -37,6 +37,16 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".FullScreenAlertActivity"
+            android:exported="false"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:theme="@android:style/Theme.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance" />
+
         <service
             android:name=".core.reminder.ReminderSoundService"
             android:exported="false"

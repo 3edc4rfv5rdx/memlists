@@ -10,6 +10,8 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import x.x.memlists.FullScreenAlertActivity
+import x.x.memlists.MainActivity
 import x.x.memlists.MemListsApplication
 import x.x.memlists.R
 import x.x.memlists.core.data.MemListsRepository
@@ -217,7 +219,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val localizer = getLocalizer(context)
         val lang = getRepository(context).getLanguageSync()
 
-        val fullScreenIntent = Intent(context, Class.forName("x.x.memlists.FullScreenAlertActivity")).apply {
+        val fullScreenIntent = Intent(context, FullScreenAlertActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra(IntentExtras.ITEM_ID, itemId)
             putExtra(IntentExtras.TITLE, title)
@@ -281,7 +283,7 @@ class ReminderReceiver : BroadcastReceiver() {
         context: Context, notificationId: Int, title: String, content: String,
         soundValue: String?, channelId: String
     ) {
-        val tapIntent = Intent(context, Class.forName("x.x.memlists.MainActivity")).apply {
+        val tapIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val tapPi = PendingIntent.getActivity(

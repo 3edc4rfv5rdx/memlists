@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FB8500">
+
+    <!-- Main content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <!-- Top section - 1/8 of screen (MemLists + Time) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MemLists"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:gravity="center"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/alert_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="12:00"
+                android:textSize="36sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:gravity="center"/>
+
+        </LinearLayout>
+
+        <!-- Middle section - 3/8 of screen (Message content) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="3"
+            android:orientation="vertical"
+            android:gravity="center_horizontal|top"
+            android:paddingTop="40dp">
+
+            <TextView
+                android:id="@+id/label_reminder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reminder:"
+                android:textSize="18sp"
+                android:textColor="#000000"
+                android:gravity="center"
+                android:layout_marginBottom="8dp"
+                android:paddingHorizontal="16dp"/>
+
+            <TextView
+                android:id="@+id/alert_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Title"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:gravity="center"
+                android:layout_marginBottom="12dp"
+                android:paddingHorizontal="16dp"/>
+
+            <TextView
+                android:id="@+id/alert_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="30sp"
+                android:textColor="#000000"
+                android:gravity="center"
+                android:paddingHorizontal="16dp"/>
+
+        </LinearLayout>
+
+        <!-- Bottom section - 4/8 of screen (Snooze + OK button) -->
+        <LinearLayout
+            android:id="@+id/snooze_section"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="4"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="8dp">
+
+            <TextView
+                android:id="@+id/label_postpone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Postpone for:"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginBottom="6dp"/>
+
+            <!-- Snooze buttons - first row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="4dp">
+
+                <Button
+                    android:id="@+id/snooze_10min"
+                    android:layout_width="70dp"
+                    android:layout_height="40dp"
+                    android:text="10 min"
+                    android:textSize="12sp"
+                    android:background="@drawable/rounded_button"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginHorizontal="3dp"/>
+
+                <Button
+                    android:id="@+id/snooze_20min"
+                    android:layout_width="70dp"
+                    android:layout_height="40dp"
+                    android:text="20 min"
+                    android:textSize="12sp"
+                    android:background="@drawable/rounded_button"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginHorizontal="3dp"/>
+
+                <Button
+                    android:id="@+id/snooze_30min"
+                    android:layout_width="70dp"
+                    android:layout_height="40dp"
+                    android:text="30 min"
+                    android:textSize="12sp"
+                    android:background="@drawable/rounded_button"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginHorizontal="3dp"/>
+
+            </LinearLayout>
+
+            <!-- Snooze buttons - second row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="4dp">
+
+                <Button
+                    android:id="@+id/snooze_1hour"
+                    android:layout_width="70dp"
+                    android:layout_height="40dp"
+                    android:text="1 hour"
+                    android:textSize="12sp"
+                    android:background="@drawable/rounded_button"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginHorizontal="3dp"/>
+
+                <Button
+                    android:id="@+id/snooze_3hours"
+                    android:layout_width="70dp"
+                    android:layout_height="40dp"
+                    android:text="3 hours"
+                    android:textSize="12sp"
+                    android:background="@drawable/rounded_button"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginHorizontal="3dp"/>
+
+            </LinearLayout>
+
+            <!-- Postpone 1 day button (hidden for daily reminders) -->
+            <Button
+                android:id="@+id/postpone_1day"
+                android:layout_width="150dp"
+                android:layout_height="40dp"
+                android:text="1 day"
+                android:textSize="12sp"
+                android:background="@drawable/rounded_button"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- OK Button -->
+            <Button
+                android:id="@+id/alert_ok_button"
+                android:layout_width="200dp"
+                android:layout_height="60dp"
+                android:text="OK"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:background="@drawable/rounded_button"
+                android:textColor="#FFFFFF"/>
+
+        </LinearLayout>
+
+        <!-- Period section - Continue / Done buttons (hidden by default) -->
+        <LinearLayout
+            android:id="@+id/period_section"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="4"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="8dp"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/period_continue_button"
+                android:layout_width="200dp"
+                android:layout_height="60dp"
+                android:text="Continue"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@drawable/rounded_button"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="24dp"/>
+
+            <Button
+                android:id="@+id/period_done_button"
+                android:layout_width="120dp"
+                android:layout_height="44dp"
+                android:text="Done"
+                android:textSize="14sp"
+                android:background="@drawable/rounded_button"
+                android:textColor="#FFFFFF"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Semi-transparent barrier overlay that blocks all clicks -->
+    <FrameLayout
+        android:id="@+id/barrier_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <!-- Draggable circle barrier -->
+    <FrameLayout
+        android:id="@+id/draggable_circle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_marginTop="150dp"
+        android:background="@drawable/draggable_circle"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔒"
+                android:textSize="60sp"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"/>
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_arrow_down_wide"
+                android:contentDescription="Drag down"/>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+</FrameLayout>
