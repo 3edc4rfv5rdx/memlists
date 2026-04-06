@@ -7,8 +7,10 @@ import android.content.Context
 import x.x.memlists.core.data.MemListsDatabaseHelper
 import x.x.memlists.core.data.MemListsRepository
 import x.x.memlists.core.i18n.AppLocalizer
+import x.x.memlists.core.reminder.ReminderMaintenance
 import x.x.memlists.core.reminder.ReminderSoundService
 import x.x.memlists.core.theme.ThemeRepository
+import kotlin.concurrent.thread
 
 class MemListsApplication : Application() {
     val databaseHelper: MemListsDatabaseHelper by lazy { MemListsDatabaseHelper(this) }
@@ -19,6 +21,9 @@ class MemListsApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        thread(name = "reminder-maintenance") {
+            ReminderMaintenance.runAll(this, repository)
+        }
     }
 
     private fun createNotificationChannels() {

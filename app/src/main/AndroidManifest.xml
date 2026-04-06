@@ -53,6 +53,14 @@
                 <action android:name="x.x.memlists.STOP_SOUND" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".core.reminder.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
