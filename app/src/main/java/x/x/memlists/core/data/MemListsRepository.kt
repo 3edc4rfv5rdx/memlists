@@ -574,4 +574,152 @@ class MemListsRepository(
         private const val KEY_TIME_DAY = "time_day"
         private const val KEY_TIME_EVENING = "time_evening"
     }
+
+    // --- Reminder queries (used by ReminderReceiver/Scheduler) ---
+
+    data class ReminderItem(
+        val id: Long,
+        val title: String,
+        val content: String,
+        val sound: String?,
+        val fullscreen: Int,
+        val loopSound: Int,
+        val active: Int,
+        val reminderType: Int,
+        val date: Int?,
+        val time: Int?,
+        val times: String?,
+        val dateTo: Int?,
+        val daysMask: Int?,
+        val yearly: Int,
+        val monthly: Int,
+        val remove: Int,
+        val periodDoneUntil: Int?
+    )
+
+    fun getItemByIdSync(id: Long): ReminderItem? {
+        val db = databaseHelper.readableDatabase
+        val cursor = db.rawQuery(
+            """SELECT id, title, content, sound, fullscreen, loop_sound, active,
+               reminder_type, date, time, times, date_to, days_mask,
+               yearly, monthly, remove, period_done_until
+               FROM items WHERE id = ?""",
+            arrayOf(id.toString())
+        )
+        return cursor.use {
+            if (!it.moveToFirst()) return@use null
+            ReminderItem(
+                id = it.getLong(0),
+                title = it.getString(1) ?: "",
+                content = it.getString(2) ?: "",
+                sound = if (it.isNull(3)) null else it.getString(3),
+                fullscreen = it.getInt(4),
+                loopSound = if (it.isNull(5)) 1 else it.getInt(5),
+                active = it.getInt(6),
+                reminderType = it.getInt(7),
+                date = if (it.isNull(8)) null else it.getInt(8),
+                time = if (it.isNull(9)) null else it.getInt(9),
+                times = if (it.isNull(10)) null else it.getString(10),
+                dateTo = if (it.isNull(11)) null else it.getInt(11),
+                daysMask = if (it.isNull(12)) null else it.getInt(12),
+                yearly = it.getInt(13),
+                monthly = it.getInt(14),
+                remove = it.getInt(15),
+                periodDoneUntil = if (it.isNull(16)) null else it.getInt(16)
+            )
+        }
+    }
+
+    fun getActiveOneTimeRemindersSync(): List<ReminderItem> {
+        return queryReminders("reminder_type = 1 AND active = 1")
+    }
+
+    fun getActiveDailyRemindersSync(): List<ReminderItem> {
+        return queryReminders("reminder_type = 2 AND active = 1")
+    }
+
+    fun getActivePeriodRemindersSync(): List<ReminderItem> {
+        return queryReminders("reminder_type = 3 AND active = 1")
+    }
+
+    private fun queryReminders(where: String): List<ReminderItem> {
+        val db = databaseHelper.readableDatabase
+        val cursor = db.rawQuery(
+            """SELECT id, title, content, sound, fullscreen, loop_sound, active,
+               reminder_type, date, time, times, date_to, days_mask,
+               yearly, monthly, remove, period_done_until
+               FROM items WHERE $where""",
+            null
+        )
+        val result = mutableListOf<ReminderItem>()
+        cursor.use {
+            while (it.moveToNext()) {
+                result += ReminderItem(
+                    id = it.getLong(0),
+                    title = it.getString(1) ?: "",
+                    content = it.getString(2) ?: "",
+                    sound = if (it.isNull(3)) null else it.getString(3),
+                    fullscreen = it.getInt(4),
+                    loopSound = if (it.isNull(5)) 1 else it.getInt(5),
+                    active = it.getInt(6),
+                    reminderType = it.getInt(7),
+                    date = if (it.isNull(8)) null else it.getInt(8),
+                    time = if (it.isNull(9)) null else it.getInt(9),
+                    times = if (it.isNull(10)) null else it.getString(10),
+                    dateTo = if (it.isNull(11)) null else it.getInt(11),
+                    daysMask = if (it.isNull(12)) null else it.getInt(12),
+                    yearly = it.getInt(13),
+                    monthly = it.getInt(14),
+                    remove = it.getInt(15),
+                    periodDoneUntil = if (it.isNull(16)) null else it.getInt(16)
+                )
+            }
+        }
+        return result
+    }
+
+    fun updateItemDateSync(id: Long, newDate: Int) {
+        val values = ContentValues().apply { put("date", newDate) }
+        databaseHelper.writableDatabase.update("items", values, "id = ?", arrayOf(id.toString()))
+    }
+
+    fun deactivateItemSync(id: Long) {
+        val values = ContentValues().apply { put("active", 0) }
+        databaseHelper.writableDatabase.update("items", values, "id = ?", arrayOf(id.toString()))
+    }
+
+    fun deleteItemSync(id: Long) {
+        databaseHelper.writableDatabase.delete("items", "id = ?", arrayOf(id.toString()))
+    }
+
+    fun updatePeriodDoneUntilSync(id: Long, doneUntil: Int?) {
+        val values = ContentValues().apply {
+            if (doneUntil == null) putNull("period_done_until")
+            else put("period_done_until", doneUntil)
+        }
+        databaseHelper.writableDatabase.update("items", values, "id = ?", arrayOf(id.toString()))
+    }
+
+    fun getDefaultSoundSync(): String? {
+        return getSettingSync(KEY_DEFAULT_SOUND)
+    }
+
+    fun getSoundRepeatsSync(): Int {
+        return getSettingSync(KEY_SOUND_REPEATS)?.toIntOrNull() ?: 25
+    }
+
+    fun isRemindersEnabledSync(): Boolean {
+        return getSettingSync(KEY_ENABLE_REMINDERS) != "false"
+    }
+
+    private fun getSettingSync(key: String): String? {
+        val db = databaseHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT value FROM settings WHERE key = ?",
+            arrayOf(key)
+        )
+        return cursor.use {
+            if (it.moveToFirst()) it.getString(0) else null
+        }
+    }
 }

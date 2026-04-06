@@ -1,9 +1,13 @@
 package x.x.memlists
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import x.x.memlists.core.data.MemListsDatabaseHelper
 import x.x.memlists.core.data.MemListsRepository
 import x.x.memlists.core.i18n.AppLocalizer
+import x.x.memlists.core.reminder.ReminderSoundService
 import x.x.memlists.core.theme.ThemeRepository
 
 class MemListsApplication : Application() {
@@ -11,5 +15,58 @@ class MemListsApplication : Application() {
     val repository: MemListsRepository by lazy { MemListsRepository(databaseHelper) }
     val localizer: AppLocalizer by lazy { AppLocalizer(this) }
     val themeRepository: ThemeRepository by lazy { ThemeRepository(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannels()
+    }
+
+    private fun createNotificationChannels() {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val reminders = NotificationChannel(
+            CHANNEL_REMINDERS, "Reminders", NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "One-time and period reminders"
+            enableLights(true)
+            enableVibration(true)
+            setSound(null, null)
+        }
+
+        val daily = NotificationChannel(
+            CHANNEL_DAILY, "Daily Reminders", NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Daily reminders"
+            enableLights(true)
+            enableVibration(true)
+            setSound(null, null)
+        }
+
+        val fullscreen = NotificationChannel(
+            CHANNEL_FULLSCREEN, "Fullscreen Alerts", NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Fullscreen reminder alerts"
+            setShowBadge(false)
+            enableVibration(false)
+            setSound(null, null)
+            setBypassDnd(true)
+        }
+
+        val sound = NotificationChannel(
+            ReminderSoundService.CHANNEL_ID, "Reminder Sound", NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Reminder sound playback control"
+            setShowBadge(false)
+            setSound(null, null)
+        }
+
+        manager.createNotificationChannels(listOf(reminders, daily, fullscreen, sound))
+    }
+
+    companion object {
+        const val CHANNEL_REMINDERS = "memlists_reminders"
+        const val CHANNEL_DAILY = "memlists_daily"
+        const val CHANNEL_FULLSCREEN = "memlists_fullscreen"
+    }
 }
 
