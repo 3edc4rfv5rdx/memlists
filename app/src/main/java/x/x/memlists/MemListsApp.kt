@@ -135,6 +135,9 @@ fun MemListsApp() {
                 MemoEditorScreen(
                     application = application,
                     languageCode = uiState.settings.languageCode,
+                    timeMorning = uiState.settings.timeMorning,
+                    timeDay = uiState.settings.timeDay,
+                    timeEvening = uiState.settings.timeEvening,
                     lw = lw,
                     onNavigateBack = { navController.popBackStack() },
                     onSaved = {
@@ -256,7 +259,11 @@ fun MemListsApp() {
                     onNewestFirstChanged = viewModel::updateNewestFirst,
                     onRemindersEnabledChanged = viewModel::updateRemindersEnabled,
                     onAutoSortDictionaryChanged = viewModel::updateAutoSortDictionary,
-                    onLargeFontWakeLockChanged = viewModel::updateLargeFontWakeLock
+                    onLargeFontWakeLockChanged = viewModel::updateLargeFontWakeLock,
+                    onTimeMorningChanged = viewModel::updateTimeMorning,
+                    onTimeDayChanged = viewModel::updateTimeDay,
+                    onTimeEveningChanged = viewModel::updateTimeEvening,
+                    onDefaultSoundChanged = viewModel::updateDefaultSound
                 )
             }
         }

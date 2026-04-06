@@ -93,6 +93,22 @@ class AppViewModel(
         persistSettings(uiState.value.settings.copy(largeFontWakeLock = enabled, isFirstLaunch = false))
     }
 
+    fun updateTimeMorning(time: String) {
+        persistSettings(uiState.value.settings.copy(timeMorning = time, isFirstLaunch = false))
+    }
+
+    fun updateTimeDay(time: String) {
+        persistSettings(uiState.value.settings.copy(timeDay = time, isFirstLaunch = false))
+    }
+
+    fun updateTimeEvening(time: String) {
+        persistSettings(uiState.value.settings.copy(timeEvening = time, isFirstLaunch = false))
+    }
+
+    fun updateDefaultSound(sound: String?) {
+        persistSettings(uiState.value.settings.copy(defaultSound = sound, isFirstLaunch = false))
+    }
+
     private fun persistSettings(settings: SettingsData) {
         _uiState.update { it.copy(settings = settings, isLoading = false) }
         viewModelScope.launch {

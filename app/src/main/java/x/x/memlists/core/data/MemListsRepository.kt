@@ -39,7 +39,10 @@ class MemListsRepository(
             hiddenPin = values[KEY_HIDDEN_PIN],
             autoSortDictionary = values[KEY_AUTO_SORT_DICT].asBoolean(default = true),
             largeFontWakeLock = values[KEY_LARGE_FONT_WAKELOCK].asBoolean(default = true),
-            isFirstLaunch = !(hasLanguage && hasTheme)
+            isFirstLaunch = !(hasLanguage && hasTheme),
+            timeMorning = values[KEY_TIME_MORNING] ?: "09:30",
+            timeDay = values[KEY_TIME_DAY] ?: "12:30",
+            timeEvening = values[KEY_TIME_EVENING] ?: "18:30"
         )
     }
 
@@ -57,6 +60,9 @@ class MemListsRepository(
                 putOptionalSetting(KEY_HIDDEN_PIN, settings.hiddenPin)
                 putSetting(KEY_AUTO_SORT_DICT, settings.autoSortDictionary.toString())
                 putSetting(KEY_LARGE_FONT_WAKELOCK, settings.largeFontWakeLock.toString())
+                putSetting(KEY_TIME_MORNING, settings.timeMorning)
+                putSetting(KEY_TIME_DAY, settings.timeDay)
+                putSetting(KEY_TIME_EVENING, settings.timeEvening)
                 setTransactionSuccessful()
             } finally {
                 endTransaction()
@@ -559,5 +565,8 @@ class MemListsRepository(
         private const val KEY_HIDDEN_PIN = "hiddpin"
         private const val KEY_AUTO_SORT_DICT = "auto_sort_dict"
         private const val KEY_LARGE_FONT_WAKELOCK = "large_font_wakelock"
+        private const val KEY_TIME_MORNING = "time_morning"
+        private const val KEY_TIME_DAY = "time_day"
+        private const val KEY_TIME_EVENING = "time_evening"
     }
 }

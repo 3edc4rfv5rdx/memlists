@@ -11,6 +11,9 @@ data class SettingsData(
     val hiddenPin: String? = null,
     val autoSortDictionary: Boolean = true,
     val largeFontWakeLock: Boolean = true,
-    val isFirstLaunch: Boolean = true
+    val isFirstLaunch: Boolean = true,
+    val timeMorning: String = "09:30",
+    val timeDay: String = "12:30",
+    val timeEvening: String = "18:30"
 )
 

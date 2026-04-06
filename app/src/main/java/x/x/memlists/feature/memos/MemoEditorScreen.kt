@@ -71,12 +71,19 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.ui.graphics.toArgb
+import x.x.memlists.core.ui.formatPickerTime
+import x.x.memlists.core.ui.parseTimeOrDefault
+import x.x.memlists.core.ui.pickerThemeResId
+import x.x.memlists.core.ui.stylePickerDialog
 import x.x.memlists.R
 
 @Composable
 fun MemoEditorScreen(
     application: MemListsApplication,
     languageCode: String,
+    timeMorning: String = "09:30",
+    timeDay: String = "12:30",
+    timeEvening: String = "18:30",
     lw: (String) -> String,
     onNavigateBack: () -> Unit,
     onSaved: () -> Unit
@@ -320,6 +327,9 @@ fun MemoEditorScreen(
                         yearlyRepeat = yearlyRepeat,
                         monthlyRepeat = monthlyRepeat,
                         autoRemove = autoRemove,
+                        timeMorning = timeMorning,
+                        timeDay = timeDay,
+                        timeEvening = timeEvening,
                         lw = lw,
                         pickerContext = pickerContext,
                         onRemindersEnabledChange = {
@@ -504,6 +514,9 @@ private fun ReminderSection(
     yearlyRepeat: Boolean,
     monthlyRepeat: Boolean,
     autoRemove: Boolean,
+    timeMorning: String,
+    timeDay: String,
+    timeEvening: String,
     lw: (String) -> String,
     pickerContext: Context,
     onRemindersEnabledChange: (Boolean) -> Unit,
@@ -575,6 +588,9 @@ private fun ReminderSection(
                         )
                         PresetTimeRow(
                             lw = lw,
+                            timeMorning = timeMorning,
+                            timeDay = timeDay,
+                            timeEvening = timeEvening,
                             onSelect = onReminderTimeChange
                         )
                         ToggleRow(
@@ -659,6 +675,9 @@ private fun ReminderSection(
                         )
                         PresetTimeRow(
                             lw = lw,
+                            timeMorning = timeMorning,
+                            timeDay = timeDay,
+                            timeEvening = timeEvening,
                             onSelect = onReminderTimeChange
                         )
                         DaysMaskEditor(
@@ -792,15 +811,18 @@ private fun ToggleRow(
 @Composable
 private fun PresetTimeRow(
     lw: (String) -> String,
+    timeMorning: String,
+    timeDay: String,
+    timeEvening: String,
     onSelect: (String) -> Unit
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
     ) {
-        ReminderPresetButton(text = lw("Morning"), subtitle = "09:30") { onSelect("09:30") }
-        ReminderPresetButton(text = lw("Day"), subtitle = "12:30") { onSelect("12:30") }
-        ReminderPresetButton(text = lw("Evening"), subtitle = "18:30") { onSelect("18:30") }
+        ReminderPresetButton(text = lw("Morning"), subtitle = timeMorning) { onSelect(timeMorning) }
+        ReminderPresetButton(text = lw("Day"), subtitle = timeDay) { onSelect(timeDay) }
+        ReminderPresetButton(text = lw("Evening"), subtitle = timeEvening) { onSelect(timeEvening) }
     }
 }
 
@@ -987,91 +1009,7 @@ private fun DayMaskChip(
     }
 }
 
-private fun pickerThemeResId(palette: x.x.memlists.core.theme.AppThemePalette): Int {
-    return when (palette.name) {
-        "Dark" -> R.style.PickerTheme_Dark
-        "Blue" -> R.style.PickerTheme_Blue
-        "Green" -> R.style.PickerTheme_Green
-        else -> R.style.PickerTheme_Light
-    }
-}
-
-private fun stylePickerDialog(
-    dialog: android.app.AlertDialog,
-    palette: x.x.memlists.core.theme.AppThemePalette
-) {
-    dialog.setOnShowListener {
-        val accentColor = palette.clUpBar.toArgb()
-        val btnTextColor = palette.clText.toArgb()
-
-        // --- buttons: rounded, colored, with spacing ---
-        listOf(
-            android.app.AlertDialog.BUTTON_POSITIVE,
-            android.app.AlertDialog.BUTTON_NEGATIVE,
-            android.app.AlertDialog.BUTTON_NEUTRAL
-        ).forEach { which ->
-            dialog.getButton(which)?.apply {
-                setTextColor(btnTextColor)
-                stateListAnimator = null
-                backgroundTintList = null
-                backgroundTintMode = null
-                foreground = null
-                background = android.graphics.drawable.PaintDrawable(accentColor).apply {
-                    setCornerRadius(24f)
-                }
-                setPadding(48, 24, 48, 24)
-                gravity = android.view.Gravity.CENTER
-                minimumHeight = 0
-                minHeight = 0
-                // disable clipping on parent
-                (parent as? android.view.ViewGroup)?.let { p ->
-                    p.clipChildren = false
-                    p.clipToPadding = false
-                    (p.parent as? android.view.ViewGroup)?.let { pp ->
-                        pp.clipChildren = false
-                        pp.clipToPadding = false
-                    }
-                }
-                (layoutParams as? android.widget.LinearLayout.LayoutParams)?.let {
-                    it.marginStart = 16
-                    it.marginEnd = 16
-                    it.bottomMargin = 24
-                    layoutParams = it
-                }
-            }
-        }
-
-        // --- push buttons down in time picker ---
-        if (dialog is TimePickerDialog) {
-            val positiveBtn = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
-            val buttonBar = positiveBtn?.parent as? android.view.View
-            buttonBar?.setPadding(buttonBar.paddingLeft, 48, buttonBar.paddingRight, buttonBar.paddingBottom)
-        }
-
-        // --- header: background + text color ---
-        val headerTextColor = palette.clText.toArgb()
-        listOf("date_picker_header", "time_header").forEach { name ->
-            val id = dialog.context.resources.getIdentifier(name, "id", "android")
-            if (id != 0) {
-                dialog.findViewById<android.view.View>(id)?.let { header ->
-                    header.setBackgroundColor(accentColor)
-                    setTextColorRecursive(header, headerTextColor)
-                }
-            }
-        }
-    }
-}
-
-private fun setTextColorRecursive(view: android.view.View, color: Int) {
-    if (view is android.widget.TextView) {
-        view.setTextColor(color)
-    }
-    if (view is android.view.ViewGroup) {
-        for (i in 0 until view.childCount) {
-            setTextColorRecursive(view.getChildAt(i), color)
-        }
-    }
-}
+// pickerThemeResId, stylePickerDialog, setTextColorRecursive moved to core/ui/PickerUtils.kt
 
 private fun parseDateOrToday(dateText: String): Calendar {
     val calendar = Calendar.getInstance()
@@ -1091,20 +1029,7 @@ private fun formatPickerDate(year: Int, month: Int, dayOfMonth: Int): String {
     return "%04d-%02d-%02d".format(year, month + 1, dayOfMonth)
 }
 
-private fun formatPickerTime(hourOfDay: Int, minute: Int): String {
-    return "%02d:%02d".format(hourOfDay, minute)
-}
-
-private fun parseTimeOrDefault(timeText: String?): Pair<Int, Int> {
-    val digits = timeText.orEmpty().filter(Char::isDigit)
-    return if (digits.length == 4) {
-        val hour = digits.substring(0, 2).toIntOrNull() ?: 9
-        val minute = digits.substring(2, 4).toIntOrNull() ?: 0
-        hour to minute
-    } else {
-        9 to 0
-    }
-}
+// formatPickerTime, parseTimeOrDefault moved to core/ui/PickerUtils.kt
 
 private fun normalizeDateInput(text: String): String {
     val digits = text.filter(Char::isDigit).take(8)

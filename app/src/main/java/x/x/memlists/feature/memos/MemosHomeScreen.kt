@@ -128,29 +128,29 @@ fun MemosHomeScreen(
                 onDismissRequest = { menuExpanded = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text(lw("Clear All Filters")) },
+                    text = { Text(lw("Clear All Filters"), fontSize = UiTokens.fsNormal, color = palette.clText) },
                     onClick = { menuExpanded = false },
                     enabled = false
                 )
                 DropdownMenuItem(
-                    text = { Text(lw("Filters")) },
+                    text = { Text(lw("Filters"), fontSize = UiTokens.fsNormal, color = palette.clText) },
                     onClick = { menuExpanded = false },
                     enabled = false
                 )
                 DropdownMenuItem(
-                    text = { Text(lw("Tag Filter")) },
+                    text = { Text(lw("Tag Filter"), fontSize = UiTokens.fsNormal, color = palette.clText) },
                     onClick = { menuExpanded = false },
                     enabled = false
                 )
                 DropdownMenuItem(
-                    text = { Text(lw("Settings")) },
+                    text = { Text(lw("Settings"), fontSize = UiTokens.fsNormal, color = palette.clText) },
                     onClick = {
                         menuExpanded = false
                         onOpenSettings()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(lw("About")) },
+                    text = { Text(lw("About"), fontSize = UiTokens.fsNormal, color = palette.clText) },
                     onClick = {
                         menuExpanded = false
                         showAbout = true

@@ -129,9 +129,9 @@ fun ScrollableScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         content = content
     )
 }
@@ -269,24 +269,23 @@ fun SettingSwitchCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 18.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = title,
                     fontSize = UiTokens.fsNormal,
-                    fontWeight = FontWeight.Bold,
                     color = palette.clText
                 )
                 Text(
                     text = body,
-                    fontSize = UiTokens.fsNormal,
-                    color = palette.clText.copy(alpha = 0.8f)
+                    fontSize = UiTokens.fsSmall,
+                    color = palette.clText.copy(alpha = 0.6f)
                 )
             }
             Switch(
