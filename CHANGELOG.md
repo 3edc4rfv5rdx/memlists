@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N ReminderReceiver: handle fired alarms (specific, daily, period, snoozed, stop-sound), show notification or launch fullscreen, reschedule recurring
 - N ReminderScheduler: schedule/cancel/reschedule alarms for one-time, daily, period, and snooze reminders via AlarmManager.setAlarmClock
 - I Reminder infrastructure: notification channels, SoundUtils, ReminderSoundService (foreground), IntentExtras, repository query methods, permissions
 - N Sound picker in reminder editor: per-item sound override with system/custom sounds, play/stop, file import

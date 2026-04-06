@@ -41,6 +41,18 @@
             android:name=".core.reminder.ReminderSoundService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <receiver
+            android:name=".core.reminder.ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="x.x.memlists.SPECIFIC_REMINDER" />
+                <action android:name="x.x.memlists.DAILY_REMINDER" />
+                <action android:name="x.x.memlists.PERIOD_REMINDER" />
+                <action android:name="x.x.memlists.SNOOZED_REMINDER" />
+                <action android:name="x.x.memlists.STOP_SOUND" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

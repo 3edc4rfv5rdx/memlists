@@ -712,6 +712,10 @@ class MemListsRepository(
         return getSettingSync(KEY_ENABLE_REMINDERS) != "false"
     }
 
+    fun getLanguageSync(): String {
+        return getSettingSync(KEY_LANGUAGE) ?: "en"
+    }
+
     private fun getSettingSync(key: String): String? {
         val db = databaseHelper.readableDatabase
         val cursor = db.rawQuery(
