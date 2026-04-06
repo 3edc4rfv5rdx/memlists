@@ -125,7 +125,7 @@ fun SettingsScreen(
             onNavigateBack()
         }
     ) { paddingValues ->
-        ScrollableScreen(paddingValues = paddingValues) {
+        ScrollableScreen(paddingValues = paddingValues, spacing = 2.dp) {
             SectionTitle(title = lw("General"))
 
             DropdownSettingCard(
@@ -236,7 +236,7 @@ private fun DropdownSettingCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -304,7 +304,7 @@ private fun TimePresetRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -389,7 +389,7 @@ private fun SoundPickerCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             ExposedDropdownMenuBox(

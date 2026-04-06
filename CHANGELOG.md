@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Tighten settings layout: reduce spacing between items to 2dp, shrink card padding
 - F Settings overhaul: dropdown selectors for language/theme, compact fields, time presets (morning/day/evening) stored in DB and used in reminder editor, default sound picker with system sounds and custom file import, play/stop playback
 - R Extract picker utils (pickerThemeResId, stylePickerDialog, parseTimeOrDefault, formatPickerTime) into shared PickerUtils.kt; add CompactOutlinedField and SoundHelper
 - R Dynamic language list from i18n.json _lang meta-key instead of hardcoded list in AppLocalizer

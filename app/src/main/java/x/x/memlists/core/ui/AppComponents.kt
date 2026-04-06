@@ -123,6 +123,7 @@ fun ScreenScaffold(
 @Composable
 fun ScrollableScreen(
     paddingValues: PaddingValues,
+    spacing: androidx.compose.ui.unit.Dp = 8.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
@@ -131,7 +132,7 @@ fun ScrollableScreen(
             .padding(paddingValues)
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(spacing),
         content = content
     )
 }
@@ -269,7 +270,7 @@ fun SettingSwitchCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 10.dp),
+                .padding(horizontal = 18.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
