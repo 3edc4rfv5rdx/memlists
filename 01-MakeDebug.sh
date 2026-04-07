@@ -20,6 +20,10 @@ build=${NEW_BUILD}
 version=${NEW_VERSION}
 EOF
 
-echo "Version: $NEW_VERSION  Build: $NEW_BUILD"
+echo "Version: $NEW_VERSION"
+echo ">>> Build: $NEW_BUILD <<<"
 
 ./gradlew assembleDebug
+
+sleep 2
+

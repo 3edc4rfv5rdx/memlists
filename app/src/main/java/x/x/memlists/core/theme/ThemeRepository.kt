@@ -3,38 +3,25 @@ package x.x.memlists.core.theme
 import android.content.Context
 import android.graphics.Color.parseColor
 import androidx.compose.ui.graphics.Color
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-
-private data class ThemeRecord(
-    val name: String,
-    val text: String,
-    val background: String,
-    val appBar: String,
-    val fill: String,
-    val selected: String,
-    val menu: String
-)
+import org.json.JSONArray
 
 class ThemeRepository(
     private val context: Context
 ) {
-    private val gson = Gson()
-
     val themes: List<AppThemePalette> by lazy {
-        context.assets.open("themes.json").bufferedReader().use { reader ->
-            val type = object : TypeToken<List<ThemeRecord>>() {}.type
-            gson.fromJson<List<ThemeRecord>>(reader, type).orEmpty().map { record ->
-                AppThemePalette(
-                    name = record.name,
-                    clText = Color(parseColor(record.text)),
-                    clBgrnd = Color(parseColor(record.background)),
-                    clUpBar = Color(parseColor(record.appBar)),
-                    clFill = Color(parseColor(record.fill)),
-                    clSel = Color(parseColor(record.selected)),
-                    clMenu = Color(parseColor(record.menu))
-                )
-            }
+        val raw = context.assets.open("themes.json").bufferedReader().use { it.readText() }
+        val array = JSONArray(raw)
+        List(array.length()) { i ->
+            val obj = array.getJSONObject(i)
+            AppThemePalette(
+                name = obj.getString("name"),
+                clText = Color(parseColor(obj.getString("text"))),
+                clBgrnd = Color(parseColor(obj.getString("background"))),
+                clUpBar = Color(parseColor(obj.getString("appBar"))),
+                clFill = Color(parseColor(obj.getString("fill"))),
+                clSel = Color(parseColor(obj.getString("selected"))),
+                clMenu = Color(parseColor(obj.getString("menu")))
+            )
         }
     }
 

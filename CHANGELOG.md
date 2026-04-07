@@ -3,6 +3,8 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- E Replace Gson with JSONArray in ThemeRepository — R8 stripped generic signatures of TypeToken<List<ThemeRecord>>, causing ClassCastException on Samsung release build
+- I Add 04-SamsDEBUG.sh and 05-SamsRELEASE.sh install scripts for Samsung device
 - E Move ReminderMaintenance from Application.onCreate() to AppViewModel after loadSettings — fixes race with DB init crash on Samsung
 - E Remove invalid showOnLockScreen/turnScreenOn manifest attributes and Theme.NoTitleBar from FullScreenAlertActivity (set programmatically)
 - I Add 99-CopyToAPKX.sh helper to copy release APK as .apkx with build number
