@@ -40,9 +40,6 @@
         <activity
             android:name=".FullScreenAlertActivity"
             android:exported="false"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true"
-            android:theme="@android:style/Theme.NoTitleBar"
             android:excludeFromRecents="true"
             android:taskAffinity=""
             android:launchMode="singleInstance" />

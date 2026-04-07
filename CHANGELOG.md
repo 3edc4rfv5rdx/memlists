@@ -3,6 +3,10 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- E Move ReminderMaintenance from Application.onCreate() to AppViewModel after loadSettings — fixes race with DB init crash on Samsung
+- E Remove invalid showOnLockScreen/turnScreenOn manifest attributes and Theme.NoTitleBar from FullScreenAlertActivity (set programmatically)
+- I Add 99-CopyToAPKX.sh helper to copy release APK as .apkx with build number
+- I Add TODO-TESTING.md with reminder system test plan
 - N FullScreenAlertActivity: lock-screen display, draggable barrier, snooze buttons, period Continue/Done, sound via foreground service
 - I BootReceiver + ReminderMaintenance: reschedule alarms on boot, delete expired, advance yearly/monthly dates on app launch
 - N Wire ReminderScheduler into MemoEditorScreen: schedule alarm after saving a reminder item

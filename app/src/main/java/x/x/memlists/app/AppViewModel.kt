@@ -7,8 +7,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import x.x.memlists.core.data.SettingsData
+import x.x.memlists.core.reminder.ReminderMaintenance
 import x.x.memlists.core.theme.AppThemePalette
 
 class AppViewModel(
@@ -36,6 +38,15 @@ class AppViewModel(
                     isLoading = false,
                     settings = settings
                 )
+            }
+            // Run maintenance after DB is ready (no race)
+            launch(Dispatchers.IO) {
+                try {
+                    val context = getApplication<Application>()
+                    ReminderMaintenance.runAll(context, repository)
+                } catch (e: Exception) {
+                    android.util.Log.e("MemLists", "Maintenance failed: ${e.message}", e)
+                }
             }
         }
     }
