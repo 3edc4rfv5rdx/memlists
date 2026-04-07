@@ -3,6 +3,14 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Auto-remove deferred to next-day maintenance: one-time reminders always deactivate on fire; physical delete happens on next app launch when date is in the past. Add getAutoRemoveOneTimeRemindersSync to include deactivated items in cleanup
+- F Lock app to portrait orientation (MainActivity, FullScreenAlertActivity)
+- F Keyboard handling: windowSoftInputMode=adjustResize on MainActivity + Modifier.imePadding() in ScrollableScreen so checkbox/fields stay reachable when IME is open
+- F Time picker default is now current time (Calendar.getInstance) instead of hardcoded 9:00
+- E FullScreenAlertActivity: register OnBackInvokedCallback (PRIORITY_OVERLAY) on API 33+ to swallow predictive back gesture — barrier circle is now the only way out
+- E FullScreenAlertActivity: remove stop+play race in onCreate — sound is already playing from ReminderReceiver-launched service, restarting it killed MediaPlayer
+- N Battery optimization request on first launch (MainActivity) and overlay/full-screen-intent permission request when saving reminder with fullscreen alert (MemoEditorScreen)
+- N ReminderPermissions helper: overlay, full-screen-intent, and battery optimization checks/requests with declined-marker SharedPrefs
 - E Replace Gson with JSONArray in ThemeRepository — R8 stripped generic signatures of TypeToken<List<ThemeRecord>>, causing ClassCastException on Samsung release build
 - I Add 04-SamsDEBUG.sh and 05-SamsRELEASE.sh install scripts for Samsung device
 - E Move ReminderMaintenance from Application.onCreate() to AppViewModel after loadSettings — fixes race with DB init crash on Samsung

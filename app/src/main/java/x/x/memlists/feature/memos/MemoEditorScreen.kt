@@ -83,6 +83,7 @@ import x.x.memlists.core.sound.SoundItem
 import x.x.memlists.core.ui.SoundPickerRow
 import x.x.memlists.core.ui.loadCustomSounds
 import x.x.memlists.core.reminder.ReminderScheduler
+import x.x.memlists.core.reminder.ReminderPermissions
 import androidx.compose.runtime.DisposableEffect
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -252,6 +253,16 @@ fun MemoEditorScreen(
                     )
                     if (remindersEnabled && itemId > 0) {
                         ReminderScheduler.scheduleItem(context, application.repository, itemId)
+                        // Ensure runtime permissions for fullscreen alerts on Samsung/Android 14+
+                        if (fullscreenAlert) {
+                            (context as? Activity)?.let { act ->
+                                if (!ReminderPermissions.hasOverlay(act)) {
+                                    ReminderPermissions.requestOverlay(act)
+                                } else if (!ReminderPermissions.hasFullScreenIntent(act)) {
+                                    ReminderPermissions.requestFullScreenIntent(act)
+                                }
+                            }
+                        }
                     }
                     canSave = true
                     onSaved()
@@ -879,18 +890,31 @@ private fun PresetTimeRow(
     timeEvening: String,
     onSelect: (String) -> Unit
 ) {
-    FlowRow(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        ReminderPresetButton(text = lw("Morning"), subtitle = timeMorning) { onSelect(timeMorning) }
-        ReminderPresetButton(text = lw("Day"), subtitle = timeDay) { onSelect(timeDay) }
-        ReminderPresetButton(text = lw("Evening"), subtitle = timeEvening) { onSelect(timeEvening) }
+        ReminderPresetButton(
+            modifier = Modifier.weight(1f),
+            text = lw("Morning"),
+            subtitle = timeMorning
+        ) { onSelect(timeMorning) }
+        ReminderPresetButton(
+            modifier = Modifier.weight(1f),
+            text = lw("Day"),
+            subtitle = timeDay
+        ) { onSelect(timeDay) }
+        ReminderPresetButton(
+            modifier = Modifier.weight(1f),
+            text = lw("Evening"),
+            subtitle = timeEvening
+        ) { onSelect(timeEvening) }
     }
 }
 
 @Composable
 private fun ReminderPresetButton(
+    modifier: Modifier = Modifier,
     text: String,
     subtitle: String? = null,
     onClick: () -> Unit
@@ -898,18 +922,25 @@ private fun ReminderPresetButton(
     val palette = LocalAppThemePalette.current
     Button(
         onClick = onClick,
+        modifier = modifier,
         shape = UiTokens.shapeMedium,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = palette.clUpBar,
             contentColor = palette.clText
         )
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text)
+            Text(
+                text = text,
+                fontSize = UiTokens.fsNormal,
+                maxLines = 1
+            )
             if (subtitle != null) {
                 Text(
                     text = subtitle,
-                    fontSize = UiTokens.fsNormal
+                    fontSize = UiTokens.fsSmall,
+                    maxLines = 1
                 )
             }
         }

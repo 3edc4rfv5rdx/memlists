@@ -634,6 +634,10 @@ class MemListsRepository(
         return queryReminders("reminder_type = 1 AND active = 1")
     }
 
+    fun getAutoRemoveOneTimeRemindersSync(): List<ReminderItem> {
+        return queryReminders("reminder_type = 1 AND remove = 1 AND yearly = 0 AND monthly = 0")
+    }
+
     fun getActiveDailyRemindersSync(): List<ReminderItem> {
         return queryReminders("reminder_type = 2 AND active = 1")
     }

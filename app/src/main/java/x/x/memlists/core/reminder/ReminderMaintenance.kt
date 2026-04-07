@@ -25,19 +25,17 @@ object ReminderMaintenance {
     }
 
     /**
-     * Delete one-time reminders with auto-remove flag that are in the past
-     * and are not yearly/monthly.
+     * Delete one-time reminders with auto-remove flag whose date is strictly
+     * in the past (next day after firing). Includes already-deactivated items.
      */
     private fun deleteExpired(repository: MemListsRepository, today: Int) {
-        val items = repository.getActiveOneTimeRemindersSync()
+        val items = repository.getAutoRemoveOneTimeRemindersSync()
         var count = 0
         for (item in items) {
-            if (item.remove == 1 && item.yearly == 0 && item.monthly == 0) {
-                val date = item.date ?: continue
-                if (date < today) {
-                    repository.deleteItemSync(item.id)
-                    count++
-                }
+            val date = item.date ?: continue
+            if (date < today) {
+                repository.deleteItemSync(item.id)
+                count++
             }
         }
         if (count > 0) Log.d(TAG, "Maintenance: deleted $count expired items")

@@ -94,18 +94,24 @@ fun setTextColorRecursive(view: View, color: Int) {
 }
 
 fun parseTimeOrDefault(timeText: String?): Pair<Int, Int> {
+    val now: () -> Pair<Int, Int> = {
+        val cal = java.util.Calendar.getInstance()
+        cal.get(java.util.Calendar.HOUR_OF_DAY) to cal.get(java.util.Calendar.MINUTE)
+    }
     val digits = timeText.orEmpty().filter(Char::isDigit)
     return if (digits.length == 4) {
-        val hour = digits.substring(0, 2).toIntOrNull() ?: 9
-        val minute = digits.substring(2, 4).toIntOrNull() ?: 0
+        val (nh, nm) = now()
+        val hour = digits.substring(0, 2).toIntOrNull() ?: nh
+        val minute = digits.substring(2, 4).toIntOrNull() ?: nm
         hour to minute
     } else if (timeText != null && timeText.contains(":")) {
+        val (nh, nm) = now()
         val parts = timeText.split(":")
-        val hour = parts.getOrNull(0)?.toIntOrNull() ?: 9
-        val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        val hour = parts.getOrNull(0)?.toIntOrNull() ?: nh
+        val minute = parts.getOrNull(1)?.toIntOrNull() ?: nm
         hour to minute
     } else {
-        9 to 0
+        now()
     }
 }
 

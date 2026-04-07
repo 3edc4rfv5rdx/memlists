@@ -78,12 +78,10 @@ class ReminderReceiver : BroadcastReceiver() {
             playSound(context, sound, item.loopSound == 1, repeatCount)
         }
 
-        // Post-fire: reschedule recurring or deactivate one-shot
+        // Post-fire: reschedule recurring or deactivate one-shot.
+        // Auto-remove is deferred to next-day maintenance — see ReminderMaintenance.deleteExpired.
         if (item.yearly == 1 || item.monthly == 1) {
             rescheduleRecurring(context, repo, item)
-        } else if (item.remove == 1) {
-            repo.deleteItemSync(itemId)
-            Log.d(TAG, "Removed one-time item $itemId (auto-remove)")
         } else {
             repo.deactivateItemSync(itemId)
             Log.d(TAG, "Deactivated one-time item $itemId")
@@ -239,8 +237,16 @@ class ReminderReceiver : BroadcastReceiver() {
             putExtra(IntentExtras.LABEL_DONE, localizer.lw("Done", lang))
         }
 
+        // Diagnostics
+        val canOverlay = Settings.canDrawOverlays(context)
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val canFullScreen = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            nm.canUseFullScreenIntent()
+        } else true
+        Log.d(TAG, "Fullscreen launch diagnostics item=$itemId canOverlay=$canOverlay canFullScreen=$canFullScreen")
+
         // Direct start if overlay permission granted
-        if (Settings.canDrawOverlays(context)) {
+        if (canOverlay) {
             try {
                 context.startActivity(fullScreenIntent)
                 Log.d(TAG, "Direct startActivity for item $itemId")
@@ -255,6 +261,16 @@ class ReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Stop sound action so user can silence even if Activity never appears
+        val stopIntent = Intent(context, ReminderReceiver::class.java).apply {
+            action = ReminderActions.STOP_SOUND
+            putExtra(IntentExtras.NOTIFICATION_ID, itemId)
+        }
+        val stopPi = PendingIntent.getBroadcast(
+            context, itemId + 900000, stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, MemListsApplication.CHANNEL_FULLSCREEN)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
@@ -262,12 +278,14 @@ class ReminderReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setFullScreenIntent(fullScreenPi, true)
+            .setContentIntent(fullScreenPi)
             .setAutoCancel(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setSound(null)
+            .setDeleteIntent(stopPi)
+            .addAction(R.drawable.ic_notification, "Stop", stopPi)
             .build()
 
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(itemId, notification)
 
         // Wake screen and play sound immediately

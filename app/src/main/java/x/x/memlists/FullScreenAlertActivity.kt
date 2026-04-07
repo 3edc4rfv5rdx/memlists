@@ -138,9 +138,9 @@ class FullScreenAlertActivity : Activity() {
         draggableCircle = findViewById(R.id.draggable_circle)
         setupDragGesture()
 
-        // Stop any sound from receiver, then play via service
-        ReminderSoundService.stop(this)
-        ReminderSoundService.play(this, soundValue, loopSound, repeatCount)
+        // Sound is already playing via ReminderSoundService started by ReminderReceiver.
+        // Do NOT restart it here — the stop+play sequence races with the existing service
+        // (stopSelf() + new intent → onDestroy kills the freshly-created MediaPlayer).
     }
 
     private fun setupWindowFlags() {
@@ -243,6 +243,29 @@ class FullScreenAlertActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
         // Disabled — user must drag circle and tap OK
+    }
+
+    private val backCallback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        android.window.OnBackInvokedCallback {
+            // Swallow predictive back gesture — user must drag circle and tap OK
+        }
+    } else null
+
+    override fun onResume() {
+        super.onResume()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY,
+                backCallback!!
+            )
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.unregisterOnBackInvokedCallback(backCallback!!)
+        }
     }
 
     override fun onDestroy() {
