@@ -99,8 +99,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val repo = getRepository(context)
 
         if (!repo.isRemindersEnabledSync()) {
-            Log.d(TAG, "Reminders disabled, rescheduling daily $itemId")
-            ReminderScheduler.scheduleDailyReminder(context, itemId.toInt(), hour, minute, daysMask, title)
+            Log.d(TAG, "Reminders disabled, dropping daily $itemId (master switch handler will reschedule on re-enable)")
             return
         }
 
@@ -189,7 +188,8 @@ class ReminderReceiver : BroadcastReceiver() {
 
         launchFullscreen(
             context, itemId, title, content, soundValue,
-            loopSound, repeatCount, isPeriod, isMonthlyPeriod
+            loopSound, repeatCount,
+            isDaily = false, isPeriod = isPeriod, isMonthlyPeriod = isMonthlyPeriod
         )
     }
 
@@ -202,14 +202,14 @@ class ReminderReceiver : BroadcastReceiver() {
     ) {
         launchFullscreen(
             context, item.id.toInt(), item.title, item.content, sound,
-            item.loopSound == 1, repeatCount, isPeriod, isMonthlyPeriod
+            item.loopSound == 1, repeatCount, isDaily, isPeriod, isMonthlyPeriod
         )
     }
 
     private fun launchFullscreen(
         context: Context, itemId: Int, title: String, content: String,
         soundValue: String?, loopSound: Boolean, repeatCount: Int,
-        isPeriod: Boolean = false, isMonthlyPeriod: Boolean = false
+        isDaily: Boolean = false, isPeriod: Boolean = false, isMonthlyPeriod: Boolean = false
     ) {
         val localizer = getLocalizer(context)
         val lang = getRepository(context).getLanguageSync()
@@ -220,6 +220,7 @@ class ReminderReceiver : BroadcastReceiver() {
             putExtra(IntentExtras.TITLE, title)
             putExtra(IntentExtras.CONTENT, content)
             putExtra(IntentExtras.SOUND, soundValue)
+            putExtra(IntentExtras.IS_DAILY, isDaily)
             putExtra(IntentExtras.IS_PERIOD, isPeriod)
             putExtra(IntentExtras.IS_MONTHLY_PERIOD, isMonthlyPeriod)
             putExtra(IntentExtras.LOOP_SOUND, loopSound)

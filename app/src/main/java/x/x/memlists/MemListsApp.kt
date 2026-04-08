@@ -8,7 +8,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -16,6 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import x.x.memlists.app.AppViewModel
+import x.x.memlists.core.reminder.ReminderScheduler
 import x.x.memlists.core.theme.MemListsTheme
 import x.x.memlists.core.ui.LoadingScreen
 import x.x.memlists.feature.lists.ListsHomeScreen
@@ -124,7 +127,17 @@ fun MemListsApp() {
                     },
                     onToggleActive = { item ->
                         memosScope.launch {
-                            memosApplication.repository.toggleMemoActive(item.id, item.active)
+                            withContext(Dispatchers.IO) {
+                                memosApplication.repository.toggleMemoActive(item.id, item.active)
+                                val newActive = !item.active
+                                if (newActive) {
+                                    ReminderScheduler.scheduleItem(
+                                        memosApplication, memosApplication.repository, item.id
+                                    )
+                                } else {
+                                    ReminderScheduler.cancelItem(memosApplication, item.id)
+                                }
+                            }
                             memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
                         }
                     }

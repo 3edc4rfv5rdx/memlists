@@ -35,6 +35,15 @@ object ReminderScheduler {
         cancelAllPeriod(context, itemId)
     }
 
+    fun cancelAll(context: Context, repository: MemListsRepository) {
+        val ids = linkedSetOf<Long>()
+        repository.getActiveOneTimeRemindersSync().forEach { ids += it.id }
+        repository.getActiveDailyRemindersSync().forEach { ids += it.id }
+        repository.getActivePeriodRemindersSync().forEach { ids += it.id }
+        for (id in ids) cancelItem(context, id)
+        Log.d(TAG, "cancelAll: cancelled ${ids.size} items")
+    }
+
     fun rescheduleAll(context: Context, repository: MemListsRepository) {
         if (!repository.isRemindersEnabledSync()) {
             Log.d(TAG, "Reminders disabled, skipping rescheduleAll")

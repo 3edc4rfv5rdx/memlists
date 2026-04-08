@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import x.x.memlists.core.data.SettingsData
 import x.x.memlists.core.reminder.ReminderMaintenance
+import x.x.memlists.core.reminder.ReminderScheduler
+import x.x.memlists.core.reminder.ReminderSoundService
 import x.x.memlists.core.theme.AppThemePalette
 
 class AppViewModel(
@@ -93,7 +95,18 @@ class AppViewModel(
     }
 
     fun updateRemindersEnabled(enabled: Boolean) {
-        persistSettings(uiState.value.settings.copy(remindersEnabled = enabled, isFirstLaunch = false))
+        val updated = uiState.value.settings.copy(remindersEnabled = enabled, isFirstLaunch = false)
+        _uiState.update { it.copy(settings = updated, isLoading = false) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.saveSettings(updated)
+            val context = getApplication<Application>()
+            if (enabled) {
+                ReminderScheduler.rescheduleAll(context, repository)
+            } else {
+                ReminderScheduler.cancelAll(context, repository)
+                ReminderSoundService.stop(context)
+            }
+        }
     }
 
     fun updateAutoSortDictionary(enabled: Boolean) {
