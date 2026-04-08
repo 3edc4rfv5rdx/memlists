@@ -7,7 +7,6 @@ import android.content.Context
 import x.x.memlists.core.data.MemListsDatabaseHelper
 import x.x.memlists.core.data.MemListsRepository
 import x.x.memlists.core.i18n.AppLocalizer
-import x.x.memlists.core.reminder.ReminderSoundService
 import x.x.memlists.core.theme.ThemeRepository
 
 class MemListsApplication : Application() {
@@ -52,15 +51,11 @@ class MemListsApplication : Application() {
             setBypassDnd(true)
         }
 
-        val sound = NotificationChannel(
-            ReminderSoundService.CHANNEL_ID, "Reminder Sound", NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = "Reminder sound playback control"
-            setShowBadge(false)
-            setSound(null, null)
-        }
+        manager.createNotificationChannels(listOf(reminders, daily, fullscreen))
 
-        manager.createNotificationChannels(listOf(reminders, daily, fullscreen, sound))
+        // Cleanup: remove the legacy "memlists_sound" channel (sound service now reuses
+        // the reminder channel for its single foreground notification).
+        try { manager.deleteNotificationChannel("memlists_sound") } catch (_: Exception) {}
     }
 
     companion object {

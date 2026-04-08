@@ -3,6 +3,10 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Single notification during reminder playback: ReminderSoundService now reuses the reminder notification id/channel as its foreground notification, so the user no longer sees a separate "playing sound" notification appear and then disappear. On stop, the notification is re-posted as dismissable (no ongoing flag, no Stop action) and the service detaches via STOP_FOREGROUND_DETACH so it stays visible. Removed legacy "memlists_sound" channel
+- F Auto-select all weekdays (mask=127) when switching reminder type to Daily or Period — empty mask was non-obvious; user can deselect days afterwards
+- F Apply "Newest first" setting to Yearly/Monthly/Periods folders — previously these were hardcoded to date ASC and ignored the setting
+- E Stable id-based tiebreaker in memo sort: `created` field stores only YYYYMMDD (no time), so same-day items tied and fell back to insertion order. Now the auto-increment id is the final tiebreaker — newer items appear first when "Newest first" is enabled
 - E Extract ReminderSoundPlayer (Thread + for-loop + Thread.sleep) shared by FullScreenAlertActivity and ReminderSoundService — fixes non-fullscreen reminders playing system ringtone continuously without pauses (MediaPlayer.onCompletion never fires for content://settings/system/* URIs, so the old service-side onCompletion-based loop ran sound endlessly until safety fuse)
 - E Request POST_NOTIFICATIONS at MainActivity startup on Android 13+ — without it all reminder notifications were silently dropped (importance=NONE at app level), invisible to the user
 - N Sound repeats setting (1–25, default 10, hard cap 26 in code): number input field with placeholder "1-25" in Settings, value passed via intent extras to FullScreenAlertActivity

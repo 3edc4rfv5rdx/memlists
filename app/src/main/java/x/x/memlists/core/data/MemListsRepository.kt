@@ -511,13 +511,29 @@ class MemListsRepository(
         folder: MemoFolderType?,
         newestFirst: Boolean
     ): Comparator<MemoItemSummary> {
+        // id-based tiebreaker: `created` stores only YYYYMMDD (no time), so items
+        // created on the same day tie. Auto-increment id is monotonic — use it as
+        // a stable secondary sort that matches "newest first" intent.
+        val byIdNewestFirst = Comparator<MemoItemSummary> { l, r ->
+            if (newestFirst) compareValues(r.id, l.id) else compareValues(l.id, r.id)
+        }
         return when (folder) {
             MemoFolderType.Yearly,
             MemoFolderType.Monthly,
-            MemoFolderType.Periods -> compareBy<MemoItemSummary>({ it.date ?: Int.MAX_VALUE }, { it.time ?: Int.MAX_VALUE })
-            MemoFolderType.Daily -> compareBy({ firstDailyTime(it.timesJson) ?: "99:99" }, { it.title.lowercase() })
+            MemoFolderType.Periods -> Comparator { left, right ->
+                compareDate(left.date, right.date, newestFirst).takeIf { it != 0 }
+                    ?: compareValues(left.time ?: Int.MAX_VALUE, right.time ?: Int.MAX_VALUE).takeIf { it != 0 }
+                    ?: byIdNewestFirst.compare(left, right)
+            }
+            MemoFolderType.Daily -> compareBy<MemoItemSummary>(
+                { firstDailyTime(it.timesJson) ?: "99:99" },
+                { it.title.lowercase() }
+            ).then(byIdNewestFirst)
             MemoFolderType.Notes -> {
-                if (newestFirst) compareByDescending<MemoItemSummary> { it.created } else compareBy { it.created }
+                Comparator { left, right ->
+                    compareDate(left.created, right.created, newestFirst).takeIf { it != 0 }
+                        ?: byIdNewestFirst.compare(left, right)
+                }
             }
             null -> {
                 val today = todayAsInt()
@@ -526,7 +542,8 @@ class MemListsRepository(
                         .takeIf { it != 0 }
                         ?: compareValues(right.priority, left.priority).takeIf { it != 0 }
                         ?: compareDate(left.date, right.date, newestFirst).takeIf { it != 0 }
-                        ?: compareDate(left.created, right.created, newestFirst)
+                        ?: compareDate(left.created, right.created, newestFirst).takeIf { it != 0 }
+                        ?: byIdNewestFirst.compare(left, right)
                 }
             }
         }

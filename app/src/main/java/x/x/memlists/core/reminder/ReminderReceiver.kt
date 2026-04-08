@@ -11,7 +11,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import x.x.memlists.FullScreenAlertActivity
-import x.x.memlists.MainActivity
 import x.x.memlists.MemListsApplication
 import x.x.memlists.R
 import x.x.memlists.core.data.MemListsRepository
@@ -72,11 +71,10 @@ class ReminderReceiver : BroadcastReceiver() {
             launchFullscreen(context, item, sound, repeatCount)
         } else {
             wakeScreen(context)
-            showNotification(
+            playWithNotification(
                 context, item.id.toInt(), item.title, item.content,
-                sound, MemListsApplication.CHANNEL_REMINDERS
+                sound, repeatCount, MemListsApplication.CHANNEL_REMINDERS
             )
-            playSound(context, sound, repeatCount)
         }
 
         // Post-fire: reschedule recurring or deactivate one-shot.
@@ -120,11 +118,10 @@ class ReminderReceiver : BroadcastReceiver() {
         } else {
             wakeScreen(context)
             val notifId = (itemId.toInt() * 10000 + hour * 100 + minute)
-            showNotification(
+            playWithNotification(
                 context, notifId, item.title, item.content,
-                sound, MemListsApplication.CHANNEL_DAILY
+                sound, repeatCount, MemListsApplication.CHANNEL_DAILY
             )
-            playSound(context, sound, repeatCount)
         }
 
         // Reschedule next occurrence
@@ -166,11 +163,10 @@ class ReminderReceiver : BroadcastReceiver() {
             launchFullscreen(context, item, sound, repeatCount, isPeriod = true, isMonthlyPeriod = isMonthlyPeriod)
         } else {
             wakeScreen(context)
-            showNotification(
+            playWithNotification(
                 context, itemId.toInt(), item.title, item.content,
-                sound, MemListsApplication.CHANNEL_REMINDERS
+                sound, repeatCount, MemListsApplication.CHANNEL_REMINDERS
             )
-            playSound(context, sound, repeatCount)
         }
     }
 
@@ -297,56 +293,21 @@ class ReminderReceiver : BroadcastReceiver() {
         Log.d(TAG, "Fullscreen alert launched for item $itemId")
     }
 
-    // --- Notification (non-fullscreen) ---
+    // --- Sound + notification (single foreground notification owned by service) ---
 
-    private fun showNotification(
+    private fun playWithNotification(
         context: Context, notificationId: Int, title: String, content: String,
-        soundValue: String?, channelId: String
+        soundValue: String?, repeatCount: Int, channelId: String
     ) {
-        val tapIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val tapPi = PendingIntent.getActivity(
-            context, notificationId, tapIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        ReminderSoundService.play(
+            context = context,
+            soundValue = soundValue,
+            repeatCount = repeatCount,
+            notificationId = notificationId,
+            title = title,
+            content = content,
+            channelId = channelId
         )
-
-        // Stop sound action
-        val stopIntent = Intent(context, ReminderReceiver::class.java).apply {
-            action = ReminderActions.STOP_SOUND
-            putExtra(IntentExtras.NOTIFICATION_ID, notificationId)
-        }
-        val stopPi = PendingIntent.getBroadcast(
-            context, notificationId + 900000, stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content).setBigContentTitle(title))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setContentIntent(tapPi)
-            .setAutoCancel(true)
-            .setDeleteIntent(stopPi)
-            .addAction(R.drawable.ic_notification, "Stop", stopPi)
-            .setSound(null)
-            .setDefaults(NotificationCompat.DEFAULT_VIBRATE or NotificationCompat.DEFAULT_LIGHTS)
-            .build()
-
-        try {
-            NotificationManagerCompat.from(context).notify(notificationId, notification)
-        } catch (se: SecurityException) {
-            Log.e(TAG, "SecurityException showing notification: ${se.message}")
-        }
-    }
-
-    // --- Sound ---
-
-    private fun playSound(context: Context, soundValue: String?, repeatCount: Int) {
-        ReminderSoundService.play(context, soundValue, repeatCount)
     }
 
     // --- Recurring reschedule ---

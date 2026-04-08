@@ -397,7 +397,15 @@ fun MemoEditorScreen(
 
                         },
                         onReminderActiveChange = { reminderActive = it },
-                        onReminderTypeChange = { reminderType = it },
+                        onReminderTypeChange = { newType ->
+                            // Auto-select all weekdays when switching to a type that
+                            // uses daysMask (Daily/Period). User can deselect — empty
+                            // mask is non-obvious otherwise.
+                            if (newType != ReminderType.OneTime && daysMask == 0) {
+                                daysMask = 127
+                            }
+                            reminderType = newType
+                        },
                         onReminderTimeChange = { reminderTimeText = it },
                         onAddDailyTime = { selectedTime ->
                             if (dailyTimes.none { it == selectedTime }) {
