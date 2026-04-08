@@ -1,13 +1,10 @@
 package x.x.memlists.core.reminder
 
 import android.app.Notification
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -17,9 +14,8 @@ import x.x.memlists.R
 
 class ReminderSoundService : Service() {
 
-    private var mediaPlayer: MediaPlayer? = null
     private val handler = Handler(Looper.getMainLooper())
-    private var currentRepeat = 0
+    private var stopRunnable: Runnable? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -27,13 +23,14 @@ class ReminderSoundService : Service() {
         when (intent?.action) {
             ACTION_PLAY -> {
                 val soundValue = intent.getStringExtra(EXTRA_SOUND)
-                val loop = intent.getBooleanExtra(EXTRA_LOOP, false)
-                val repeatCount = intent.getIntExtra(EXTRA_REPEAT_COUNT, 25)
+                val repeatCount = intent.getIntExtra(EXTRA_REPEAT_COUNT, 10)
                 startForeground(NOTIFICATION_ID, buildNotification())
-                playSound(soundValue, loop, repeatCount)
+                Log.d(TAG, "Service ACTION_PLAY repeatCount=$repeatCount")
+                ReminderSoundPlayer.start(applicationContext, soundValue, repeatCount)
+                scheduleSelfStop(repeatCount)
             }
             ACTION_STOP -> {
-                stopPlayback()
+                ReminderSoundPlayer.stop()
                 stopSelf()
             }
             else -> {
@@ -43,99 +40,21 @@ class ReminderSoundService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun playSound(soundValue: String?, loop: Boolean, repeatCount: Int) {
-        stopPlayback()
-        currentRepeat = 0
-
-        // Hard cap: never exceed 26 cycles regardless of user setting.
-        val cappedCount = repeatCount.coerceIn(1, 26)
-        Log.d(TAG, "playSound: loop=$loop repeatCount=$repeatCount capped=$cappedCount")
-
-        val primaryUri = SoundUtils.resolveUri(soundValue)
-        val fallbackUri = SoundUtils.getSystemFallbackUri()
-
-        if (playSoundUri(primaryUri, loop, cappedCount)) return
-        if (fallbackUri != null && fallbackUri != primaryUri) {
-            Log.w(TAG, "Primary sound failed, trying fallback")
-            if (playSoundUri(fallbackUri, loop, cappedCount)) return
+    /**
+     * Foreground service must stop itself after playback finishes — otherwise the
+     * "Reminder Sound" notification lingers. Estimate generously: cap*10s.
+     */
+    private fun scheduleSelfStop(repeatCount: Int) {
+        stopRunnable?.let { handler.removeCallbacks(it) }
+        val cycles = repeatCount.coerceIn(1, 26)
+        val totalMs = cycles * 10_000L + 5_000L
+        val r = Runnable {
+            Log.d(TAG, "Service self-stop after ${totalMs}ms")
+            ReminderSoundPlayer.stop()
+            stopSelf()
         }
-
-        Log.e(TAG, "Unable to play any reminder sound")
-        stopSelf()
-    }
-
-    private fun playSoundUri(uri: Uri?, loop: Boolean, repeatCount: Int): Boolean {
-        if (uri == null) return false
-        Log.d(TAG, "playSoundUri: uri=$uri loop=$loop repeatCount=$repeatCount")
-        return try {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(SoundUtils.alarmAudioAttributes)
-                SoundUtils.routeToSpeaker(this, applicationContext)
-                setDataSource(applicationContext, uri)
-                isLooping = false
-                setOnCompletionListener { mp ->
-                    currentRepeat++
-                    Log.d(TAG, "onCompletion: currentRepeat=$currentRepeat / $repeatCount (loop=$loop)")
-                    if (loop && currentRepeat < repeatCount) {
-                        try {
-                            mp.seekTo(0)
-                            handler.postDelayed({
-                                try {
-                                    if (mediaPlayer != null) mp.start()
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Error restarting sound: ${e.message}")
-                                    stopPlayback()
-                                    stopSelf()
-                                }
-                            }, 2000)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error seeking sound: ${e.message}")
-                            stopPlayback()
-                            stopSelf()
-                        }
-                    } else {
-                        stopPlayback()
-                        stopSelf()
-                    }
-                }
-                setOnErrorListener { _, what, extra ->
-                    Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
-                    false
-                }
-                prepare()
-                Log.d(TAG, "prepared duration=${duration}ms isLooping=$isLooping")
-                start()
-
-                // Safety fuse: force-stop after expected total duration + buffer.
-                // Guards against system ringtone files where MediaPlayer never fires onCompletion.
-                val perCycleMs = duration.coerceAtLeast(1000)
-                val totalMs = perCycleMs.toLong() * repeatCount + 3000L
-                handler.postDelayed({
-                    Log.d(TAG, "Safety fuse fired after ${totalMs}ms — forcing stop")
-                    stopPlayback()
-                    stopSelf()
-                }, totalMs)
-            }
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing sound uri=$uri: ${e.message}")
-            try { mediaPlayer?.release() } catch (_: Exception) {}
-            mediaPlayer = null
-            false
-        }
-    }
-
-    private fun stopPlayback() {
-        handler.removeCallbacksAndMessages(null)
-        try {
-            mediaPlayer?.let {
-                if (it.isPlaying) it.stop()
-                it.release()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping playback: ${e.message}")
-        }
-        mediaPlayer = null
+        stopRunnable = r
+        handler.postDelayed(r, totalMs)
     }
 
     private fun buildNotification(): Notification {
@@ -158,7 +77,8 @@ class ReminderSoundService : Service() {
     }
 
     override fun onDestroy() {
-        stopPlayback()
+        stopRunnable?.let { handler.removeCallbacks(it) }
+        ReminderSoundPlayer.stop()
         super.onDestroy()
     }
 
@@ -169,14 +89,12 @@ class ReminderSoundService : Service() {
         const val ACTION_PLAY = "x.x.memlists.PLAY_SOUND"
         const val ACTION_STOP = "x.x.memlists.STOP_SOUND"
         const val EXTRA_SOUND = "sound"
-        const val EXTRA_LOOP = "loop"
         const val EXTRA_REPEAT_COUNT = "repeatCount"
 
-        fun play(context: Context, soundValue: String?, loop: Boolean = false, repeatCount: Int = 25) {
+        fun play(context: Context, soundValue: String?, repeatCount: Int = 10) {
             val intent = Intent(context, ReminderSoundService::class.java).apply {
                 action = ACTION_PLAY
                 putExtra(EXTRA_SOUND, soundValue)
-                putExtra(EXTRA_LOOP, loop)
                 putExtra(EXTRA_REPEAT_COUNT, repeatCount)
             }
             context.startForegroundService(intent)

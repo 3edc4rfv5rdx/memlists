@@ -3,6 +3,8 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- E Extract ReminderSoundPlayer (Thread + for-loop + Thread.sleep) shared by FullScreenAlertActivity and ReminderSoundService — fixes non-fullscreen reminders playing system ringtone continuously without pauses (MediaPlayer.onCompletion never fires for content://settings/system/* URIs, so the old service-side onCompletion-based loop ran sound endlessly until safety fuse)
+- E Request POST_NOTIFICATIONS at MainActivity startup on Android 13+ — without it all reminder notifications were silently dropped (importance=NONE at app level), invisible to the user
 - N Sound repeats setting (1–25, default 10, hard cap 26 in code): number input field with placeholder "1-25" in Settings, value passed via intent extras to FullScreenAlertActivity
 - E FullScreenAlertActivity owns sound playback directly via simple Thread + for-loop + Thread.sleep(duration) + 2-sec pause between cycles; static guard prevents stacking threads on Activity recreation; sound stops on barrier drop (hideBarrier), not on OK/snooze buttons
 - E Remove ReminderSoundService.play call from ReminderReceiver.launchFullscreen — Activity is sole sound owner for fullscreen alerts (eliminates duplicate cycle)

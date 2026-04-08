@@ -76,7 +76,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 context, item.id.toInt(), item.title, item.content,
                 sound, MemListsApplication.CHANNEL_REMINDERS
             )
-            playSound(context, sound, item.loopSound == 1, repeatCount)
+            playSound(context, sound, repeatCount)
         }
 
         // Post-fire: reschedule recurring or deactivate one-shot.
@@ -124,7 +124,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 context, notifId, item.title, item.content,
                 sound, MemListsApplication.CHANNEL_DAILY
             )
-            playSound(context, sound, item.loopSound == 1, repeatCount)
+            playSound(context, sound, repeatCount)
         }
 
         // Reschedule next occurrence
@@ -170,7 +170,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 context, itemId.toInt(), item.title, item.content,
                 sound, MemListsApplication.CHANNEL_REMINDERS
             )
-            playSound(context, sound, item.loopSound == 1, repeatCount)
+            playSound(context, sound, repeatCount)
         }
     }
 
@@ -345,8 +345,8 @@ class ReminderReceiver : BroadcastReceiver() {
 
     // --- Sound ---
 
-    private fun playSound(context: Context, soundValue: String?, loop: Boolean, repeatCount: Int) {
-        ReminderSoundService.play(context, soundValue, loop, repeatCount)
+    private fun playSound(context: Context, soundValue: String?, repeatCount: Int) {
+        ReminderSoundService.play(context, soundValue, repeatCount)
     }
 
     // --- Recurring reschedule ---

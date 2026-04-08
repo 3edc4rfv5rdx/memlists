@@ -1,14 +1,18 @@
 package x.x.memlists.core.reminder
 
+import android.Manifest
 import android.app.Activity
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 /**
  * Runtime permission helpers for the reminder pipeline.
@@ -26,6 +30,28 @@ object ReminderPermissions {
     private const val TAG = "MemLists"
     private const val PREFS = "memlists_perms"
     private const val KEY_BATTERY_DECLINED = "battery_opt_declined"
+    const val REQ_POST_NOTIFICATIONS = 4711
+
+    fun hasNotifications(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        return ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun requestNotifications(activity: Activity) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (hasNotifications(activity)) return
+        try {
+            ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                REQ_POST_NOTIFICATIONS
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Cannot request POST_NOTIFICATIONS: ${e.message}")
+        }
+    }
 
     fun hasOverlay(context: Context): Boolean = Settings.canDrawOverlays(context)
 
