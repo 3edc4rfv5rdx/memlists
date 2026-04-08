@@ -102,7 +102,7 @@ class MemListsRepository(
         }
         val args = if (parentId == null) emptyArray() else arrayOf(parentId.toString())
 
-        val containers = mutableListOf<ListContainerSummary>()
+        val rawRows = mutableListOf<RawListRow>()
         databaseHelper.readableDatabase.query(
             "lists",
             arrayOf("id", "name", "comment", "parent_id", "is_folder", "pin", "sort_order"),
@@ -113,24 +113,31 @@ class MemListsRepository(
             "sort_order ASC, name COLLATE NOCASE ASC"
         ).use { cursor ->
             while (cursor.moveToNext()) {
-                val id = cursor.getLong(0)
-                val isFolder = cursor.getInt(4) == 1
-                val counts = if (isFolder) {
-                    0 to 0
-                } else {
-                    loadListEntryCounts(id)
-                }
-                containers += ListContainerSummary(
-                    id = id,
+                rawRows += RawListRow(
+                    id = cursor.getLong(0),
                     name = cursor.getString(1),
                     comment = cursor.getStringOrNull(2),
                     parentId = cursor.getLongOrNull(3),
-                    isFolder = isFolder,
-                    isLocked = !cursor.getStringOrNull(5).isNullOrBlank(),
-                    uncheckedCount = counts.first,
-                    totalCount = counts.second
+                    isFolder = cursor.getInt(4) == 1,
+                    isLocked = !cursor.getStringOrNull(5).isNullOrBlank()
                 )
             }
+        }
+
+        val nonFolderIds = rawRows.filter { !it.isFolder }.map { it.id }
+        val countsById = loadListEntryCountsBulk(nonFolderIds)
+        val containers = rawRows.map { row ->
+            val (unchecked, total) = if (row.isFolder) 0 to 0 else countsById[row.id] ?: (0 to 0)
+            ListContainerSummary(
+                id = row.id,
+                name = row.name,
+                comment = row.comment,
+                parentId = row.parentId,
+                isFolder = row.isFolder,
+                isLocked = row.isLocked,
+                uncheckedCount = unchecked,
+                totalCount = total
+            )
         }
 
         ListsHomeData(
@@ -417,11 +424,14 @@ class MemListsRepository(
             null
         ).use { cursor ->
             while (cursor.moveToNext()) {
-                rows += cursor.toMemoItemSummary(photoCount = loadPhotoCount(cursor.getLong(0)))
+                rows += cursor.toMemoItemSummary(photoCount = 0)
             }
         }
 
-        return rows.sortedWith(memoComparator(folder = folder, newestFirst = newestFirst))
+        val photoCounts = loadPhotoCountsBulk(rows.map { it.id })
+        val withCounts = rows.map { it.copy(photoCount = photoCounts[it.id] ?: 0) }
+
+        return withCounts.sortedWith(memoComparator(folder = folder, newestFirst = newestFirst))
     }
 
     private fun loadMemoFolders(hiddenMode: Boolean): List<MemoFolderSummary> {
@@ -445,29 +455,49 @@ class MemListsRepository(
         }
     }
 
-    private fun loadPhotoCount(itemId: Long): Int {
-        return databaseHelper.readableDatabase.compileStatement(
-            "SELECT COUNT(*) FROM photos WHERE owner_type = 'memo' AND owner_id = ?"
-        ).apply {
-            bindLong(1, itemId)
-        }.simpleQueryForLong().toInt()
+    private fun loadPhotoCountsBulk(memoIds: List<Long>): Map<Long, Int> {
+        if (memoIds.isEmpty()) return emptyMap()
+        val placeholders = memoIds.joinToString(",") { "?" }
+        val sql = "SELECT owner_id, COUNT(*) FROM photos " +
+            "WHERE owner_type = 'memo' AND owner_id IN ($placeholders) GROUP BY owner_id"
+        val args = memoIds.map { it.toString() }.toTypedArray()
+        val result = mutableMapOf<Long, Int>()
+        databaseHelper.readableDatabase.rawQuery(sql, args).use { cursor ->
+            while (cursor.moveToNext()) {
+                result[cursor.getLong(0)] = cursor.getInt(1)
+            }
+        }
+        return result
     }
 
-    private fun loadListEntryCounts(listId: Long): Pair<Int, Int> {
-        val total = databaseHelper.readableDatabase.compileStatement(
-            "SELECT COUNT(*) FROM entries WHERE list_id = ?"
-        ).apply {
-            bindLong(1, listId)
-        }.simpleQueryForLong().toInt()
-
-        val unchecked = databaseHelper.readableDatabase.compileStatement(
-            "SELECT COUNT(*) FROM entries WHERE list_id = ? AND is_checked = 0"
-        ).apply {
-            bindLong(1, listId)
-        }.simpleQueryForLong().toInt()
-
-        return unchecked to total
+    private fun loadListEntryCountsBulk(listIds: List<Long>): Map<Long, Pair<Int, Int>> {
+        if (listIds.isEmpty()) return emptyMap()
+        val placeholders = listIds.joinToString(",") { "?" }
+        val sql = "SELECT list_id, " +
+            "SUM(CASE WHEN is_checked = 0 THEN 1 ELSE 0 END), " +
+            "COUNT(*) " +
+            "FROM entries WHERE list_id IN ($placeholders) GROUP BY list_id"
+        val args = listIds.map { it.toString() }.toTypedArray()
+        val result = mutableMapOf<Long, Pair<Int, Int>>()
+        databaseHelper.readableDatabase.rawQuery(sql, args).use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(0)
+                val unchecked = cursor.getInt(1)
+                val total = cursor.getInt(2)
+                result[id] = unchecked to total
+            }
+        }
+        return result
     }
+
+    private data class RawListRow(
+        val id: Long,
+        val name: String,
+        val comment: String?,
+        val parentId: Long?,
+        val isFolder: Boolean,
+        val isLocked: Boolean
+    )
 
     private fun Cursor.toMemoItemSummary(photoCount: Int): MemoItemSummary {
         return MemoItemSummary(

@@ -13,11 +13,13 @@ class MainActivity : ComponentActivity() {
         if (!ReminderPermissions.hasNotifications(this)) {
             ReminderPermissions.requestNotifications(this)
         }
-        // Ask once on cold start to disable battery optimization — needed for reliable
-        // alarm delivery on Samsung. Skip if user already declined.
-        if (ReminderPermissions.isBatteryOptimized(this) && !ReminderPermissions.batteryOptDeclined(this)) {
+        // Ask on cold start to disable battery optimization — needed for reliable alarm
+        // delivery on Samsung. Re-prompt at most once per BATTERY_OPT_REPROMPT_INTERVAL_MS
+        // (7 days) so a user who dismissed the system screen with Back still gets another
+        // chance later. Once granted, isBatteryOptimized() returns false and we stop asking.
+        if (ReminderPermissions.shouldPromptBatteryOpt(this)) {
             ReminderPermissions.requestBatteryOptimization(this)
-            ReminderPermissions.markBatteryOptDeclined(this)
+            ReminderPermissions.markBatteryOptPrompted(this)
         }
         setContent {
             MemListsApp()

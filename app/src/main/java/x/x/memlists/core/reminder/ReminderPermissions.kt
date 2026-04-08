@@ -29,7 +29,8 @@ object ReminderPermissions {
 
     private const val TAG = "MemLists"
     private const val PREFS = "memlists_perms"
-    private const val KEY_BATTERY_DECLINED = "battery_opt_declined"
+    private const val KEY_BATTERY_LAST_PROMPT = "battery_opt_last_prompt"
+    private const val BATTERY_OPT_REPROMPT_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000
     const val REQ_POST_NOTIFICATIONS = 4711
 
     fun hasNotifications(context: Context): Boolean {
@@ -94,14 +95,16 @@ object ReminderPermissions {
         return !pm.isIgnoringBatteryOptimizations(context.packageName)
     }
 
-    fun batteryOptDeclined(context: Context): Boolean {
-        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_BATTERY_DECLINED, false)
+    fun shouldPromptBatteryOpt(context: Context): Boolean {
+        if (!isBatteryOptimized(context)) return false
+        val last = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getLong(KEY_BATTERY_LAST_PROMPT, 0L)
+        return System.currentTimeMillis() - last >= BATTERY_OPT_REPROMPT_INTERVAL_MS
     }
 
-    fun markBatteryOptDeclined(context: Context) {
+    fun markBatteryOptPrompted(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putBoolean(KEY_BATTERY_DECLINED, true).apply()
+            .edit().putLong(KEY_BATTERY_LAST_PROMPT, System.currentTimeMillis()).apply()
     }
 
     fun requestBatteryOptimization(activity: Activity) {
