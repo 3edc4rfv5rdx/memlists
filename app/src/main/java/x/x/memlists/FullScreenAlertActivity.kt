@@ -3,6 +3,7 @@ package x.x.memlists
 import android.app.Activity
 import android.app.NotificationManager
 import android.content.Context
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -15,6 +16,7 @@ import x.x.memlists.core.data.todayAsInt
 import x.x.memlists.core.reminder.IntentExtras
 import x.x.memlists.core.reminder.ReminderScheduler
 import x.x.memlists.core.reminder.ReminderSoundService
+import x.x.memlists.core.reminder.SoundUtils
 import java.util.Calendar
 
 class FullScreenAlertActivity : Activity() {
@@ -23,6 +25,8 @@ class FullScreenAlertActivity : Activity() {
     private lateinit var barrierOverlay: View
     private var dragStartY = 0f
     private var initialY = 0f
+
+    private var totalRepeats = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -138,9 +142,88 @@ class FullScreenAlertActivity : Activity() {
         draggableCircle = findViewById(R.id.draggable_circle)
         setupDragGesture()
 
-        // Sound is already playing via ReminderSoundService started by ReminderReceiver.
-        // Do NOT restart it here — the stop+play sequence races with the existing service
-        // (stopSelf() + new intent → onDestroy kills the freshly-created MediaPlayer).
+        // Stop any sound the receiver may have started, then play locally.
+        ReminderSoundService.stop(this)
+        totalRepeats = repeatCount.coerceIn(1, 26)
+        if (loopSound || totalRepeats == 1) {
+            startSoundLoop(soundValue)
+        }
+    }
+
+    private fun startSoundLoop(soundValue: String?) {
+        // Guard: only one sound thread per process. Activity may be recreated
+        // (CLEAR_TASK + fullscreen intent), do not stack threads.
+        synchronized(soundLock) {
+            if (activeThread != null) {
+                Log.d(TAG, "Sound thread already running, skip start")
+                return
+            }
+            val uri = SoundUtils.resolveUri(soundValue) ?: SoundUtils.getSystemFallbackUri() ?: return
+            val repeats = totalRepeats
+            val ctx = applicationContext
+            Log.d(TAG, "startSoundLoop: repeats=$repeats uri=$uri")
+            val t = Thread {
+                var interrupted = false
+                for (i in 1..repeats) {
+                    if (Thread.currentThread().isInterrupted) break
+
+                    val player = MediaPlayer()
+                    val durationMs: Int
+                    try {
+                        player.setAudioAttributes(SoundUtils.alarmAudioAttributes)
+                        SoundUtils.routeToSpeaker(player, ctx)
+                        player.setDataSource(ctx, uri)
+                        player.isLooping = false
+                        player.prepare()
+                        durationMs = player.duration.coerceAtLeast(500)
+                        player.start()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Sound play error: ${e.message}")
+                        try { player.release() } catch (_: Exception) {}
+                        break
+                    }
+                    synchronized(soundLock) { activePlayer = player }
+                    Log.d(TAG, "Sound cycle $i/$repeats duration=${durationMs}ms")
+
+                    try {
+                        Thread.sleep(durationMs.toLong())
+                    } catch (_: InterruptedException) {
+                        interrupted = true
+                    }
+
+                    try { player.stop() } catch (_: Exception) {}
+                    try { player.release() } catch (_: Exception) {}
+                    synchronized(soundLock) { activePlayer = null }
+                    if (interrupted) break
+
+                    if (i < repeats) {
+                        try {
+                            Thread.sleep(2000)
+                        } catch (_: InterruptedException) {
+                            break
+                        }
+                    }
+                }
+                Log.d(TAG, "Sound thread finished (interrupted=$interrupted)")
+                synchronized(soundLock) { activeThread = null }
+            }
+            activeThread = t
+            t.start()
+        }
+    }
+
+    private fun stopSound() {
+        synchronized(soundLock) {
+            activeThread?.interrupt()
+            activeThread = null
+            try {
+                activePlayer?.let {
+                    if (it.isPlaying) it.stop()
+                    it.release()
+                }
+            } catch (_: Exception) {}
+            activePlayer = null
+        }
     }
 
     private fun setupWindowFlags() {
@@ -185,6 +268,8 @@ class FullScreenAlertActivity : Activity() {
 
     private fun hideBarrier() {
         draggableCircle.setOnTouchListener(null)
+        stopSound()
+        ReminderSoundService.stop(this)
         barrierOverlay.animate().alpha(0f).setDuration(300)
             .withEndAction { barrierOverlay.visibility = View.GONE }.start()
         draggableCircle.animate().alpha(0f).setDuration(300)
@@ -236,6 +321,7 @@ class FullScreenAlertActivity : Activity() {
     }
 
     private fun dismissAlert() {
+        stopSound()
         ReminderSoundService.stop(this)
         finish()
     }
@@ -270,10 +356,14 @@ class FullScreenAlertActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopSound()
         ReminderSoundService.stop(this)
     }
 
     companion object {
         private const val TAG = "MemLists"
+        private val soundLock = Any()
+        private var activeThread: Thread? = null
+        private var activePlayer: MediaPlayer? = null
     }
 }

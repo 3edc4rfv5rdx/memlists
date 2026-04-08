@@ -367,7 +367,7 @@ Three reminder types (reminder_type 1/2/3), unified scheduling via platform noti
 - Newest first toggle.
 - Enable reminders toggle (reschedules/cancels all on change).
 - Default sound selector.
-- Sound repeats (1–99, for fullscreen alerts).
+- Sound repeats (1–25, default 10, hard cap 26 cycles in code).
 - Debug logs toggle.
 - Create backup button.
 - Restore from backup button.

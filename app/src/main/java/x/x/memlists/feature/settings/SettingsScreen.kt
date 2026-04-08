@@ -46,6 +46,7 @@ import x.x.memlists.core.sound.SoundItem
 import x.x.memlists.core.theme.AppThemePalette
 import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.CompactOutlinedField
+import x.x.memlists.core.ui.DropdownCard
 import x.x.memlists.core.ui.SoundPickerCard
 import x.x.memlists.core.ui.loadCustomSounds
 import x.x.memlists.core.ui.NavigationButtonMode
@@ -77,7 +78,8 @@ fun SettingsScreen(
     onTimeMorningChanged: (String) -> Unit,
     onTimeDayChanged: (String) -> Unit,
     onTimeEveningChanged: (String) -> Unit,
-    onDefaultSoundChanged: (String?) -> Unit
+    onDefaultSoundChanged: (String?) -> Unit,
+    onSoundRepeatsChanged: (Int) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
     val context = LocalContext.current
@@ -127,7 +129,7 @@ fun SettingsScreen(
         ScrollableScreen(paddingValues = paddingValues, spacing = 2.dp) {
             SectionTitle(title = lw("General"))
 
-            DropdownSettingCard(
+            DropdownCard(
                 title = lw("Language"),
                 selectedValue = settings.languageCode,
                 options = languages.map { it.code },
@@ -138,7 +140,7 @@ fun SettingsScreen(
                 palette = palette
             )
 
-            DropdownSettingCard(
+            DropdownCard(
                 title = lw("Theme"),
                 selectedValue = settings.themeName,
                 options = themes.map { it.name },
@@ -213,21 +215,25 @@ fun SettingsScreen(
                 onPickFile = { filePicker.launch("audio/*") },
                 palette = palette
             )
+
+            SoundRepeatsCard(
+                title = lw("Sound repeats"),
+                value = settings.soundRepeats,
+                onValueChanged = onSoundRepeatsChanged,
+                palette = palette
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DropdownSettingCard(
+private fun SoundRepeatsCard(
     title: String,
-    selectedValue: String,
-    options: List<String>,
-    labelForOption: (String) -> String,
-    onOptionSelected: (String) -> Unit,
+    value: Int,
+    onValueChanged: (Int) -> Unit,
     palette: AppThemePalette
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var text by remember(value) { mutableStateOf(value.toString()) }
     Card(
         shape = UiTokens.shapeLarge,
         colors = CardDefaults.cardColors(containerColor = palette.clFill)
@@ -244,46 +250,35 @@ private fun DropdownSettingCard(
                 fontSize = UiTokens.fsNormal,
                 color = palette.clText
             )
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it }
-            ) {
-                CompactOutlinedField(
-                    value = labelForOption(selectedValue),
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                        .width(150.dp),
-                    textStyle = TextStyle(
-                        fontSize = UiTokens.fsNormal,
-                        color = palette.clText
-                    ),
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    focusedBorderColor = palette.clUpBar,
-                    unfocusedBorderColor = palette.clMenu
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    options.forEach { option ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = labelForOption(option),
-                                    fontSize = UiTokens.fsNormal,
-                                    color = palette.clText
-                                )
-                            },
-                            onClick = {
-                                expanded = false
-                                onOptionSelected(option)
-                            }
-                        )
+            CompactOutlinedField(
+                value = text,
+                onValueChange = { input ->
+                    val digits = input.filter(Char::isDigit).take(2)
+                    if (digits.isEmpty()) {
+                        text = ""
+                        return@CompactOutlinedField
                     }
-                }
-            }
+                    val parsed = digits.toIntOrNull() ?: return@CompactOutlinedField
+                    if (parsed !in 1..25) return@CompactOutlinedField
+                    text = digits
+                    onValueChanged(parsed)
+                },
+                modifier = Modifier.width(80.dp),
+                textStyle = TextStyle(
+                    fontSize = UiTokens.fsNormal,
+                    color = palette.clText
+                ),
+                placeholder = {
+                    Text(
+                        text = "1-25",
+                        fontSize = UiTokens.fsNormal,
+                        color = palette.clMenu
+                    )
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                focusedBorderColor = palette.clUpBar,
+                unfocusedBorderColor = palette.clMenu
+            )
         }
     }
 }

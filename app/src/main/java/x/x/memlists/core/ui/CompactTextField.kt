@@ -23,6 +23,7 @@ fun CompactOutlinedField(
     modifier: Modifier = Modifier,
     readOnly: Boolean = false,
     textStyle: TextStyle = TextStyle.Default,
+    placeholder: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     focusedBorderColor: Color = Color.Unspecified,
@@ -48,6 +49,7 @@ fun CompactOutlinedField(
                 singleLine = true,
                 visualTransformation = VisualTransformation.None,
                 interactionSource = interactionSource,
+                placeholder = placeholder,
                 trailingIcon = trailingIcon,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 container = {

@@ -35,7 +35,7 @@ class MemListsRepository(
             remindersEnabled = values[KEY_ENABLE_REMINDERS].asBoolean(default = true),
             debugLogs = values[KEY_DEBUG_LOGS].asBoolean(default = false),
             defaultSound = values[KEY_DEFAULT_SOUND],
-            soundRepeats = values[KEY_SOUND_REPEATS]?.toIntOrNull() ?: 25,
+            soundRepeats = values[KEY_SOUND_REPEATS]?.toIntOrNull() ?: 10,
             hiddenPin = values[KEY_HIDDEN_PIN],
             autoSortDictionary = values[KEY_AUTO_SORT_DICT].asBoolean(default = true),
             largeFontWakeLock = values[KEY_LARGE_FONT_WAKELOCK].asBoolean(default = true),
@@ -709,7 +709,7 @@ class MemListsRepository(
     }
 
     fun getSoundRepeatsSync(): Int {
-        return getSettingSync(KEY_SOUND_REPEATS)?.toIntOrNull() ?: 25
+        return getSettingSync(KEY_SOUND_REPEATS)?.toIntOrNull() ?: 10
     }
 
     fun isRemindersEnabledSync(): Boolean {

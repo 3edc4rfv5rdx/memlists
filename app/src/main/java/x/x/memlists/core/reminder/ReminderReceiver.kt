@@ -66,6 +66,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val sound = item.sound ?: repo.getDefaultSoundSync()
         val repeatCount = repo.getSoundRepeatsSync()
+        Log.d(TAG, "handleSpecific item=$itemId loopSound=${item.loopSound} repeatCount=$repeatCount fullscreen=${item.fullscreen}")
 
         if (item.fullscreen == 1) {
             launchFullscreen(context, item, sound, repeatCount)
@@ -288,9 +289,10 @@ class ReminderReceiver : BroadcastReceiver() {
 
         nm.notify(itemId, notification)
 
-        // Wake screen and play sound immediately
+        // Wake screen. Sound playback is owned by FullScreenAlertActivity itself —
+        // do NOT start the service here, otherwise the user hears an extra cycle
+        // before the Activity stops the service and starts its own loop.
         wakeScreen(context)
-        ReminderSoundService.play(context, soundValue, loopSound, repeatCount)
 
         Log.d(TAG, "Fullscreen alert launched for item $itemId")
     }

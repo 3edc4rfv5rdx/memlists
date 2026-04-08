@@ -120,6 +120,15 @@ class AppViewModel(
         persistSettings(uiState.value.settings.copy(defaultSound = sound, isFirstLaunch = false))
     }
 
+    fun updateSoundRepeats(value: Int) {
+        persistSettings(
+            uiState.value.settings.copy(
+                soundRepeats = value.coerceIn(1, 25),
+                isFirstLaunch = false
+            )
+        )
+    }
+
     private fun persistSettings(settings: SettingsData) {
         _uiState.update { it.copy(settings = settings, isLoading = false) }
         viewModelScope.launch {

@@ -263,7 +263,8 @@ fun MemListsApp() {
                     onTimeMorningChanged = viewModel::updateTimeMorning,
                     onTimeDayChanged = viewModel::updateTimeDay,
                     onTimeEveningChanged = viewModel::updateTimeEvening,
-                    onDefaultSoundChanged = viewModel::updateDefaultSound
+                    onDefaultSoundChanged = viewModel::updateDefaultSound,
+                    onSoundRepeatsChanged = viewModel::updateSoundRepeats
                 )
             }
         }

@@ -7,7 +7,7 @@ data class SettingsData(
     val remindersEnabled: Boolean = true,
     val debugLogs: Boolean = false,
     val defaultSound: String? = null,
-    val soundRepeats: Int = 25,
+    val soundRepeats: Int = 10,
     val hiddenPin: String? = null,
     val autoSortDictionary: Boolean = true,
     val largeFontWakeLock: Boolean = true,

@@ -3,6 +3,12 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N Sound repeats setting (1–25, default 10, hard cap 26 in code): number input field with placeholder "1-25" in Settings, value passed via intent extras to FullScreenAlertActivity
+- E FullScreenAlertActivity owns sound playback directly via simple Thread + for-loop + Thread.sleep(duration) + 2-sec pause between cycles; static guard prevents stacking threads on Activity recreation; sound stops on barrier drop (hideBarrier), not on OK/snooze buttons
+- E Remove ReminderSoundService.play call from ReminderReceiver.launchFullscreen — Activity is sole sound owner for fullscreen alerts (eliminates duplicate cycle)
+- F Align getSoundRepeatsSync fallback (10) with loadSettings; previously 25 caused inflated cycle count when DB had no stored value
+- R Extract shared DropdownCard component into core/ui; replace local DropdownSettingCard in SettingsScreen and OptionGroup radio buttons in WelcomeScreen with DropdownCard for language/theme selection
+- R CompactOutlinedField gains optional placeholder parameter
 - F Auto-remove deferred to next-day maintenance: one-time reminders always deactivate on fire; physical delete happens on next app launch when date is in the past. Add getAutoRemoveOneTimeRemindersSync to include deactivated items in cleanup
 - F Lock app to portrait orientation (MainActivity, FullScreenAlertActivity)
 - F Keyboard handling: windowSoftInputMode=adjustResize on MainActivity + Modifier.imePadding() in ScrollableScreen so checkbox/fields stay reachable when IME is open

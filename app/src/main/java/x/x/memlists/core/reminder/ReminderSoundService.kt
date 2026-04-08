@@ -47,13 +47,17 @@ class ReminderSoundService : Service() {
         stopPlayback()
         currentRepeat = 0
 
+        // Hard cap: never exceed 26 cycles regardless of user setting.
+        val cappedCount = repeatCount.coerceIn(1, 26)
+        Log.d(TAG, "playSound: loop=$loop repeatCount=$repeatCount capped=$cappedCount")
+
         val primaryUri = SoundUtils.resolveUri(soundValue)
         val fallbackUri = SoundUtils.getSystemFallbackUri()
 
-        if (playSoundUri(primaryUri, loop, repeatCount)) return
+        if (playSoundUri(primaryUri, loop, cappedCount)) return
         if (fallbackUri != null && fallbackUri != primaryUri) {
             Log.w(TAG, "Primary sound failed, trying fallback")
-            if (playSoundUri(fallbackUri, loop, repeatCount)) return
+            if (playSoundUri(fallbackUri, loop, cappedCount)) return
         }
 
         Log.e(TAG, "Unable to play any reminder sound")
@@ -62,16 +66,16 @@ class ReminderSoundService : Service() {
 
     private fun playSoundUri(uri: Uri?, loop: Boolean, repeatCount: Int): Boolean {
         if (uri == null) return false
+        Log.d(TAG, "playSoundUri: uri=$uri loop=$loop repeatCount=$repeatCount")
         return try {
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(SoundUtils.alarmAudioAttributes)
                 SoundUtils.routeToSpeaker(this, applicationContext)
                 setDataSource(applicationContext, uri)
-                prepare()
-                start()
-
+                isLooping = false
                 setOnCompletionListener { mp ->
                     currentRepeat++
+                    Log.d(TAG, "onCompletion: currentRepeat=$currentRepeat / $repeatCount (loop=$loop)")
                     if (loop && currentRepeat < repeatCount) {
                         try {
                             mp.seekTo(0)
@@ -94,11 +98,23 @@ class ReminderSoundService : Service() {
                         stopSelf()
                     }
                 }
-
                 setOnErrorListener { _, what, extra ->
                     Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
                     false
                 }
+                prepare()
+                Log.d(TAG, "prepared duration=${duration}ms isLooping=$isLooping")
+                start()
+
+                // Safety fuse: force-stop after expected total duration + buffer.
+                // Guards against system ringtone files where MediaPlayer never fires onCompletion.
+                val perCycleMs = duration.coerceAtLeast(1000)
+                val totalMs = perCycleMs.toLong() * repeatCount + 3000L
+                handler.postDelayed({
+                    Log.d(TAG, "Safety fuse fired after ${totalMs}ms — forcing stop")
+                    stopPlayback()
+                    stopSelf()
+                }, totalMs)
             }
             true
         } catch (e: Exception) {
