@@ -74,6 +74,15 @@ android {
         }
     }
 
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -88,6 +97,48 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+abstract class RenameReleaseApks : DefaultTask() {
+    @get:org.gradle.api.tasks.Input
+    abstract val versionName: Property<String>
+
+    @get:org.gradle.api.tasks.Input
+    abstract val versionCode: Property<Int>
+
+    @get:org.gradle.api.tasks.Internal
+    abstract val outputDir: DirectoryProperty
+
+    @org.gradle.api.tasks.TaskAction
+    fun rename() {
+        val outDir = outputDir.get().asFile
+        val prefix = "memlists-${versionName.get()}+${versionCode.get()}-release"
+        val mappings = mapOf(
+            "app-universal-release.apk" to "$prefix-universal.apk",
+            "app-arm64-v8a-release.apk" to "$prefix-arm64-v8a.apk",
+            "app-armeabi-v7a-release.apk" to "$prefix-armeabi-v7a.apk",
+            "app-x86_64-release.apk" to "$prefix-x86_64.apk"
+        )
+        mappings.forEach { (srcName, dstName) ->
+            val src = File(outDir, srcName)
+            if (!src.exists()) return@forEach
+            val dst = File(outDir, dstName)
+            if (dst.exists()) dst.delete()
+            src.renameTo(dst)
+        }
+    }
+}
+
+val renameReleaseApks by tasks.registering(RenameReleaseApks::class) {
+    versionName.set(releaseVersionName)
+    versionCode.set(releaseVersionCode)
+    outputDir.set(layout.buildDirectory.dir("outputs/apk/release"))
+}
+
+tasks.configureEach {
+    if (name == "assembleRelease") {
+        finalizedBy(renameReleaseApks)
     }
 }
 

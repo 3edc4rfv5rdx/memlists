@@ -11,10 +11,12 @@ if [[ -z "$build" ]]; then
     exit 1
 fi
 
-apk=$(ls -t "$APK_DIR"/*.apk 2>/dev/null | head -1)
+# Prefer arm64-v8a for distribution; fall back to universal
+apk=$(ls -t "$APK_DIR"/*-arm64-v8a.apk 2>/dev/null | head -1)
+[[ -z "$apk" ]] && apk=$(ls -t "$APK_DIR"/*-universal.apk 2>/dev/null | head -1)
 
 if [[ -z "$apk" || ! -f "$apk" ]]; then
-    echo "ERROR: Release arm64 APK not found. Build first: ./00-MakeRelease.sh"
+    echo "ERROR: Release arm64 APK not found. Build first: ./10-MakeRelease.sh"
     exit 1
 fi
 

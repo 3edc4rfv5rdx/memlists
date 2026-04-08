@@ -14,3 +14,9 @@ echo "Version: $version  Build: $build"
 echo "Release build does not change build_number.txt"
 
 ./gradlew assembleRelease
+
+echo
+echo "Release APKs: app/build/outputs/apk/release/"
+ls -1 app/build/outputs/apk/release/*.apk 2>/dev/null
+
+sleep 2
