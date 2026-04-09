@@ -1,5 +1,7 @@
 package x.x.memlists.feature.memos
 
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -139,6 +141,22 @@ fun MemosHomeScreen(
     }
     var menuExpanded by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+
+    // Without this, system Back on Memos falls through to NavController and
+    // pops the only entry on the stack — leaving NavHost with nothing to
+    // render (ComposeView 0×0, white screen). Especially likely after a
+    // predictive-back gesture that committed *after* MemoEditor was already
+    // popped via popIfOnTop. Intercept Back here to keep finish/leave-folder
+    // routed through our own callbacks.
+    BackHandler(enabled = true) {
+        Log.d("MemosHome", "BackHandler invoked, selectedFolder=$selectedFolder")
+        if (selectedFolder == null) {
+            onCloseRoot()
+        } else {
+            onBackFromFolder()
+        }
+    }
+
     if (showAbout) {
         x.x.memlists.core.ui.AboutDialog(
             lw = lw,

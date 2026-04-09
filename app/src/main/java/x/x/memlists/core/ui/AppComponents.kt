@@ -32,8 +32,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -41,7 +44,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import x.x.memlists.core.theme.LocalAppThemePalette
@@ -50,6 +55,52 @@ enum class NavigationButtonMode {
     None,
     Back,
     Close
+}
+
+enum class SnackbarTone {
+    Default,
+    Error,
+    Success,
+    Info,
+    Caution,
+    Special
+}
+
+private data class ThemedSnackbarVisuals(
+    override val message: String,
+    val tone: SnackbarTone,
+    override val actionLabel: String? = null,
+    override val withDismissAction: Boolean = false,
+    override val duration: SnackbarDuration = SnackbarDuration.Short
+) : SnackbarVisuals
+
+suspend fun SnackbarHostState.showThemedSnackbar(
+    message: String,
+    tone: SnackbarTone = SnackbarTone.Default,
+    actionLabel: String? = null,
+    withDismissAction: Boolean = false,
+    duration: SnackbarDuration = if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite
+): SnackbarResult = showSnackbar(
+    ThemedSnackbarVisuals(
+        message = message,
+        tone = tone,
+        actionLabel = actionLabel,
+        withDismissAction = withDismissAction,
+        duration = duration
+    )
+)
+
+private fun snackbarContainerColor(tone: SnackbarTone): Color = when (tone) {
+    SnackbarTone.Default -> Color(0xFFADD8E6)
+    SnackbarTone.Error -> Color(0xFFD32F2F)
+    SnackbarTone.Success -> Color(0xFF2E7D32)
+    SnackbarTone.Info -> Color(0xFF1976D2)
+    SnackbarTone.Caution -> Color(0xFFF29238)
+    SnackbarTone.Special -> Color(0xFF7B1FA2)
+}
+
+private fun snackbarContentColor(containerColor: Color): Color {
+    return if (containerColor.luminance() > 0.5f) Color.Black else Color.White
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,9 +123,11 @@ fun ScreenScaffold(
         snackbarHost = {
             if (snackbarHostState != null) {
                 SnackbarHost(hostState = snackbarHostState) { data ->
+                    val tone = (data.visuals as? ThemedSnackbarVisuals)?.tone ?: SnackbarTone.Default
+                    val themedContainerColor = snackbarContainerColor(tone)
                     androidx.compose.material3.Snackbar(
-                        containerColor = snackbarColor ?: androidx.compose.ui.graphics.Color(0xFFF29238),
-                        contentColor = snackbarTextColor ?: androidx.compose.ui.graphics.Color.Black
+                        containerColor = snackbarColor ?: themedContainerColor,
+                        contentColor = snackbarTextColor ?: snackbarContentColor(themedContainerColor)
                     ) {
                         Text(
                             text = data.visuals.message,

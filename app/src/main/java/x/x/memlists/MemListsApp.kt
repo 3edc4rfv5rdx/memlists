@@ -1,6 +1,7 @@
 package x.x.memlists
 
 import android.app.Activity
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,6 +56,33 @@ private fun listDetailRoute(listId: Long): String = "list_detail/$listId"
 
 private fun memoEditRoute(id: Long): String = "memo_edit/$id"
 
+private const val NAV_TAG = "MemListsNav"
+
+/**
+ * Pop only if the expected route is still on top of the back stack. Prevents
+ * double-pop white-screen race when Back and a save-completion callback both
+ * try to leave the same screen (see TODO.md / project_memo_editor_back_race).
+ * Sets the refresh flag on whichever entry is now current so the parent
+ * screen still refreshes even if Back already popped us.
+ */
+private fun popIfOnTop(
+    navController: NavHostController,
+    expectedRoute: String,
+    refreshKey: String
+) {
+    val currentRoute = navController.currentBackStackEntry?.destination?.route
+    if (currentRoute == expectedRoute) {
+        navController.previousBackStackEntry?.savedStateHandle?.set(refreshKey, true)
+        navController.popBackStack()
+        Log.d(NAV_TAG, "popIfOnTop: popped $expectedRoute")
+    } else {
+        // Already popped (likely by Back press during save) — just notify
+        // whichever entry is now on top so it still refreshes.
+        navController.currentBackStackEntry?.savedStateHandle?.set(refreshKey, true)
+        Log.d(NAV_TAG, "popIfOnTop: skip pop, current=$currentRoute expected=$expectedRoute")
+    }
+}
+
 private fun entryNewRoute(listId: Long): String = "entry_new/$listId"
 
 @Composable
@@ -76,6 +104,15 @@ fun MemListsApp() {
         val navController = rememberNavController()
         val activity = LocalContext.current as? Activity
         val startDestination = if (uiState.settings.isFirstLaunch) Routes.Welcome else Routes.Memos
+
+        androidx.compose.runtime.DisposableEffect(navController) {
+            val listener = androidx.navigation.NavController.OnDestinationChangedListener { ctrl, destination, _ ->
+                val stack = ctrl.currentBackStack.value.joinToString("→") { it.destination.route ?: "?" }
+                Log.d(NAV_TAG, "destChanged → ${destination.route}; stack=[$stack]")
+            }
+            navController.addOnDestinationChangedListener(listener)
+            onDispose { navController.removeOnDestinationChangedListener(listener) }
+        }
 
         NavHost(
             navController = navController,
@@ -168,9 +205,12 @@ fun MemListsApp() {
                     timeEvening = uiState.settings.timeEvening,
                     lw = lw,
                     onNavigateBack = { navController.popBackStack() },
-                    onSaved = {
+                    onSaved = { itemId ->
                         navController.previousBackStackEntry?.savedStateHandle?.set("memos_refresh", true)
-                        navController.popBackStack()
+                        navController.navigate(memoEditRoute(itemId)) {
+                            popUpTo(Routes.MemoNew) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -191,7 +231,6 @@ fun MemListsApp() {
                     onNavigateBack = { navController.popBackStack() },
                     onSaved = {
                         navController.previousBackStackEntry?.savedStateHandle?.set("memos_refresh", true)
-                        navController.popBackStack()
                     },
                     memoId = memoId
                 )

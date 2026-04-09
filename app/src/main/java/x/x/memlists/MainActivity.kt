@@ -2,12 +2,17 @@ package x.x.memlists
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import x.x.memlists.core.reminder.ReminderPermissions
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // TargetSdk 36 gets enforced edge-to-edge on Android 15+. Opt in explicitly
+        // so IME/system-bar insets are dispatched through the modern path instead of
+        // mixing enforced edge-to-edge with legacy adjustResize window behavior.
+        enableEdgeToEdge()
         // Ask for POST_NOTIFICATIONS on Android 13+ — without this all reminder
         // notifications are silently dropped (importance=NONE at app level).
         if (!ReminderPermissions.hasNotifications(this)) {
@@ -26,4 +31,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

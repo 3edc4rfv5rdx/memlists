@@ -5,6 +5,7 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.ContextWrapper
+import android.util.Log
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
@@ -63,8 +64,10 @@ import x.x.memlists.MemListsApplication
 import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
+import x.x.memlists.core.ui.SnackbarTone
 import x.x.memlists.core.ui.ScrollableScreen
 import x.x.memlists.core.ui.UiTokens
+import x.x.memlists.core.ui.showThemedSnackbar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Clear
@@ -100,7 +103,7 @@ fun MemoEditorScreen(
     timeEvening: String = "18:30",
     lw: (String) -> String,
     onNavigateBack: () -> Unit,
-    onSaved: () -> Unit,
+    onSaved: (Long) -> Unit,
     memoId: Long? = null
 ) {
     val isEdit = memoId != null
@@ -167,10 +170,15 @@ fun MemoEditorScreen(
         onDispose { soundHelper.release() }
     }
 
-    // Force Back to close the editor in a single press — otherwise IME/focus
-    // dismissal can swallow the first 1–3 presses on some devices.
-    BackHandler(enabled = canSave) {
-        onNavigateBack()
+    // Always-on BackHandler. While saving (canSave=false) we MUST still intercept
+    // Back, otherwise it falls through to the NavController and pops the stack —
+    // then the save coroutine's onSaved() pops a second time, leaving an empty
+    // stack and a blank white screen. Idempotent popIfOnTop() in MemListsApp is
+    // the second line of defense for the same race.
+    BackHandler(enabled = true) {
+        Log.d("MemoEditor", "BackHandler invoked, canSave=$canSave")
+        if (canSave) onNavigateBack()
+        // else: swallow — save coroutine will navigate when it finishes
     }
 
     LaunchedEffect(Unit) {
@@ -224,7 +232,11 @@ fun MemoEditorScreen(
     }
 
     fun showValidation(message: String) {
-        scope.launch { snackbarHostState.showSnackbar(message) }
+        scope.launch { snackbarHostState.showThemedSnackbar(message, SnackbarTone.Caution) }
+    }
+
+    fun showSaved(message: String) {
+        scope.launch { snackbarHostState.showThemedSnackbar(message, SnackbarTone.Success) }
     }
 
     fun saveItem() {
@@ -356,8 +368,14 @@ fun MemoEditorScreen(
                             }
                         }
                     }
-                    canSave = true
-                    onSaved()
+                    // Keep canSave=false through navigation transition so the
+                    // BackHandler stays in "swallow" mode until the composable leaves.
+                    Log.d("MemoEditor", "save coroutine done, calling onSaved(itemId=$itemId)")
+                    onSaved(itemId)
+                    if (memoId != null) {
+                        canSave = true
+                        showSaved(lw("Saved"))
+                    }
                 }
             }
         }
