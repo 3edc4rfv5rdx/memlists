@@ -80,6 +80,71 @@ class MemListsRepository(
         MemosHomeData(items = items, folders = folders)
     }
 
+    suspend fun loadTodayReminderItems(hiddenMode: Boolean = false): List<MemoItemSummary> = withContext(Dispatchers.IO) {
+        val rows = mutableListOf<MemoItemSummary>()
+        databaseHelper.readableDatabase.query(
+            "items",
+            arrayOf(
+                "id",
+                "title",
+                "content",
+                "tags",
+                "priority",
+                "created",
+                "hidden",
+                "reminder_type",
+                "active",
+                "date",
+                "time",
+                "times",
+                "date_to",
+                "days_mask",
+                "yearly",
+                "monthly",
+                "period_done_until"
+            ),
+            "hidden = ? AND reminder_type != 0 AND active = 1",
+            arrayOf(if (hiddenMode) "1" else "0"),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += MemoItemSummary(
+                    id = cursor.getLong(0),
+                    title = cursor.getString(1) ?: "",
+                    content = cursor.getStringOrNull(2),
+                    tags = cursor.getStringOrNull(3),
+                    priority = cursor.getInt(4),
+                    created = cursor.getInt(5),
+                    hidden = cursor.getInt(6) == 1,
+                    reminderType = cursor.getInt(7),
+                    active = cursor.getInt(8) == 1,
+                    date = cursor.getIntOrNull(9),
+                    time = cursor.getIntOrNull(10),
+                    timesJson = cursor.getStringOrNull(11),
+                    dateTo = cursor.getIntOrNull(12),
+                    daysMask = cursor.getIntOrNull(13),
+                    yearly = cursor.getInt(14) == 1,
+                    monthly = cursor.getInt(15) == 1,
+                    photoCount = 0
+                ).takeIf {
+                    isReminderDueToday(
+                        reminderType = cursor.getInt(7),
+                        date = cursor.getIntOrNull(9),
+                        time = cursor.getIntOrNull(10),
+                        timesJson = cursor.getStringOrNull(11),
+                        dateTo = cursor.getIntOrNull(12),
+                        daysMask = cursor.getIntOrNull(13),
+                        periodDoneUntil = cursor.getIntOrNull(16)
+                    )
+                } ?: continue
+            }
+        }
+
+        rows.sortedWith(todayReminderComparator())
+    }
+
     suspend fun loadListsHome(parentId: Long?): ListsHomeData = withContext(Dispatchers.IO) {
         val currentFolderName = parentId?.let { folderId ->
             databaseHelper.readableDatabase.query(
@@ -672,6 +737,63 @@ class MemListsRepository(
             date > today -> 1
             else -> 2
         }
+    }
+
+    private fun todayReminderComparator(): Comparator<MemoItemSummary> {
+        return compareBy<MemoItemSummary>(
+            { todayReminderSortTime(it) },
+            { it.title.lowercase() }
+        ).thenBy { it.id }
+    }
+
+    private fun todayReminderSortTime(item: MemoItemSummary): String {
+        return when (item.reminderType) {
+            2 -> firstDailyTime(item.timesJson) ?: "99:99"
+            else -> formatTime(item.time) ?: "99:99"
+        }
+    }
+
+    private fun isReminderDueToday(
+        reminderType: Int,
+        date: Int?,
+        time: Int?,
+        timesJson: String?,
+        dateTo: Int?,
+        daysMask: Int?,
+        periodDoneUntil: Int?
+    ): Boolean {
+        val today = todayAsInt()
+        return when (reminderType) {
+            1 -> date == today
+            2 -> {
+                timesJson != null &&
+                    !firstDailyTime(timesJson).isNullOrBlank() &&
+                    isTodayInDaysMask(daysMask ?: 127)
+            }
+            3 -> {
+                if (periodDoneUntil != null && today < periodDoneUntil) return false
+                if (!isTodayInDaysMask(daysMask ?: 127)) return false
+                val dateFrom = date ?: return false
+                val dateUntil = dateTo ?: return false
+                if (dateFrom in 1..31 && dateUntil in 1..31) {
+                    val day = today % 100
+                    if (dateFrom <= dateUntil) {
+                        day in dateFrom..dateUntil
+                    } else {
+                        day >= dateFrom || day <= dateUntil
+                    }
+                } else {
+                    today in dateFrom..dateUntil
+                }
+            }
+            else -> false
+        }
+    }
+
+    private fun isTodayInDaysMask(daysMask: Int): Boolean {
+        val today = java.time.LocalDate.now()
+        val bitIndex = today.dayOfWeek.value - 1 // Mon=1 .. Sun=7
+        return daysMask and (1 shl bitIndex) != 0
     }
 
     private fun compareDate(left: Int?, right: Int?, newestFirst: Boolean): Int {

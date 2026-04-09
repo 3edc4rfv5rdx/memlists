@@ -47,14 +47,19 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import x.x.memlists.core.data.MemoFolderSummary
 import x.x.memlists.core.data.MemoFolderType
 import x.x.memlists.core.data.MemoItemSummary
@@ -76,9 +81,13 @@ fun MemosHomeScreen(
     isLoading: Boolean,
     items: List<MemoItemSummary>,
     folders: List<MemoFolderSummary>,
+    todayReminderItems: List<MemoItemSummary>,
+    showTodayRemindersDialog: Boolean,
     lw: (String) -> String,
     onOpenLists: () -> Unit,
     onOpenSettings: () -> Unit,
+    onCheckReminders: () -> Unit,
+    onDismissTodayReminders: () -> Unit,
     onAddMemo: () -> Unit,
     onOpenFolder: (MemoFolderType) -> Unit,
     onBackFromFolder: () -> Unit,
@@ -132,6 +141,13 @@ fun MemosHomeScreen(
                     )
                 ) { Text(lw("Cancel"), fontSize = UiTokens.fsNormal) }
             }
+        )
+    }
+    if (showTodayRemindersDialog) {
+        TodayRemindersDialog(
+            items = todayReminderItems,
+            lw = lw,
+            onDismiss = onDismissTodayReminders
         )
     }
     val visibleItems = if (selectedFolder == null) {
@@ -189,7 +205,7 @@ fun MemosHomeScreen(
             }
         },
         actions = {
-            IconButton(onClick = { }) {
+            IconButton(onClick = onCheckReminders) {
                 Icon(
                     imageVector = Icons.Default.Alarm,
                     contentDescription = lw("Check Reminders")
@@ -497,6 +513,90 @@ private fun MemoItemCard(
             }
         }
     }
+}
+
+@Composable
+private fun TodayRemindersDialog(
+    items: List<MemoItemSummary>,
+    lw: (String) -> String,
+    onDismiss: () -> Unit
+) {
+    val palette = LocalAppThemePalette.current
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = true)
+    ) {
+        val dialogWindowProvider = LocalView.current.parent as? DialogWindowProvider
+        SideEffect {
+            dialogWindowProvider?.window?.setDimAmount(0.18f)
+        }
+        Card(
+            shape = UiTokens.shapeLarge,
+            colors = CardDefaults.cardColors(containerColor = palette.clMenu)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = lw("Check Reminders"),
+                    color = palette.clText,
+                    fontSize = UiTokens.fsMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                if (items.isEmpty()) {
+                    Text(
+                        text = lw("No reminders for today"),
+                        color = palette.clText,
+                        fontSize = UiTokens.fsNormal
+                    )
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(items, key = { it.id }) { item ->
+                            Text(
+                                text = todayReminderDialogLine(item),
+                                color = palette.clText,
+                                fontSize = UiTokens.fsNormal
+                            )
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        shape = UiTokens.shapeMedium,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.clUpBar,
+                            contentColor = palette.clText
+                        )
+                    ) {
+                        Text(lw("OK"), fontSize = UiTokens.fsNormal)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun todayReminderTimeLine(item: MemoItemSummary): String? {
+    return when (item.reminderType) {
+        2 -> formatTimes(item.timesJson)
+        else -> formatTime(item.time)
+    }?.ifBlank { null }
+}
+
+private fun todayReminderDialogLine(item: MemoItemSummary): String {
+    val head = todayReminderTimeLine(item)?.let { "$it: " }.orEmpty()
+    val tail = listOfNotNull(
+        item.title.takeIf { it.isNotBlank() },
+        item.content?.takeIf { it.isNotBlank() }
+    ).joinToString(" ")
+    return "- " + (head + tail).ifBlank { item.title }
 }
 
 @Composable

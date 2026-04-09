@@ -130,6 +130,8 @@ fun MemListsApp() {
                 val memosScope = rememberCoroutineScope()
                 val memosViewModel: MemosViewModel = viewModel()
                 val memosUiState by memosViewModel.uiState.collectAsState()
+                val todayReminderItems = remember { mutableStateOf(emptyList<x.x.memlists.core.data.MemoItemSummary>()) }
+                val showTodayRemindersDialog = remember { mutableStateOf(false) }
                 val refreshHandle = navController.currentBackStackEntry?.savedStateHandle
                 val shouldRefresh by refreshHandle
                     ?.getStateFlow("memos_refresh", false)
@@ -152,9 +154,23 @@ fun MemListsApp() {
                     isLoading = memosUiState.isLoading,
                     items = memosUiState.items,
                     folders = memosUiState.folders,
+                    todayReminderItems = todayReminderItems.value,
+                    showTodayRemindersDialog = showTodayRemindersDialog.value,
                     lw = lw,
                     onOpenLists = { navController.navigate(Routes.Lists) },
                     onOpenSettings = { navController.navigate(Routes.Settings) },
+                    onCheckReminders = {
+                        memosScope.launch {
+                            val items = withContext(Dispatchers.IO) {
+                                memosApplication.repository.loadTodayReminderItems()
+                            }
+                            todayReminderItems.value = items
+                            showTodayRemindersDialog.value = true
+                        }
+                    },
+                    onDismissTodayReminders = {
+                        showTodayRemindersDialog.value = false
+                    },
                     onAddMemo = { navController.navigate(Routes.MemoNew) },
                     onOpenFolder = { folder ->
                         memosViewModel.openFolder(folder, newestFirst = uiState.settings.newestFirst)
