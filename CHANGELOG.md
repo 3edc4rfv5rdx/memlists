@@ -3,6 +3,8 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- E FullScreenAlertActivity no longer calls ReminderSoundService.stop in onCreate — that call is `startService(ACTION_STOP)` which the main looper processes only after onCreate returns, and its handler then calls ReminderSoundPlayer.stop(), interrupting the playback thread we just started. Now Activity only does the synchronous static cleanup `ReminderSoundPlayer.stop()` before `start()`. Promoted the static guard skip log to Log.w
+- E FullScreenAlertActivity skipped sound playback when `loopSound=false && repeatCount != 1` due to a nonsensical guard `if (loopSound || repeatCount == 1)`. Dropped the guard — player always starts, ReminderSoundPlayer.start already coerces repeatCount into 1..26
 - E Edited period reminder did not fire: updateMemo left `period_done_until` intact, so a previously-Done monthly period (with periodDoneUntil set to next month) would suppress the newly edited schedule via the `today < periodDoneUntil` check in ReminderScheduler.schedulePeriodItem and ReminderReceiver.handlePeriod. Fix: putNull("period_done_until") in updateMemo — same as insertMemo
 - F Long-press Edit/Delete DropdownMenu on memo row shifted right via offset=DpOffset(120.dp, 0.dp) so it appears near the horizontal middle of the row instead of hugging the left edge
 - F Memo home row polish: tap no longer triggers edit (swipe-right or long-press menu only, per spec 2.4); long-press opens DropdownMenu with Edit/Delete. SwipeableMemoRow wraps the card in a Box with combinedClickable(onLongClick), Card itself no longer has clickable

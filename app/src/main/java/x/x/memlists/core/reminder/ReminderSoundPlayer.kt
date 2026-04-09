@@ -26,7 +26,7 @@ object ReminderSoundPlayer {
     fun start(context: Context, soundValue: String?, repeats: Int) {
         synchronized(lock) {
             if (activeThread != null) {
-                Log.d(TAG, "ReminderSoundPlayer: thread already running, skip start")
+                Log.w(TAG, "ReminderSoundPlayer: thread already running, skip start")
                 return
             }
             val uri = SoundUtils.resolveUri(soundValue) ?: SoundUtils.getSystemFallbackUri() ?: run {

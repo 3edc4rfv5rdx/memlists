@@ -184,7 +184,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val repeatCount = repo.getSoundRepeatsSync()
 
         val isPeriod = item?.reminderType == 3
-        val isMonthlyPeriod = isPeriod && item?.date != null && item.date in 1..31
+        val isMonthlyPeriod = isPeriod && item.date != null && item.date in 1..31
 
         launchFullscreen(
             context, itemId, title, content, soundValue,

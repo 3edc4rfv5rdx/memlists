@@ -138,11 +138,13 @@ class FullScreenAlertActivity : Activity() {
         draggableCircle = findViewById(R.id.draggable_circle)
         setupDragGesture()
 
-        // Stop any sound the receiver may have started, then play locally via shared player.
-        ReminderSoundService.stop(this)
-        if (loopSound || repeatCount == 1) {
-            ReminderSoundPlayer.start(this, soundValue, repeatCount)
-        }
+        // Sync cleanup of any leftover player thread, then play locally.
+        // Do NOT call ReminderSoundService.stop here — it sends an async ACTION_STOP
+        // Intent that the service processes on the main looper AFTER onCreate returns,
+        // and its handler then calls ReminderSoundPlayer.stop() which would kill the
+        // thread we just started.
+        ReminderSoundPlayer.stop()
+        ReminderSoundPlayer.start(this, soundValue, repeatCount)
     }
 
     private fun setupWindowFlags() {
@@ -245,6 +247,7 @@ class FullScreenAlertActivity : Activity() {
         finish()
     }
 
+    @Deprecated("Deprecated in Java")
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
         // Disabled — user must drag circle and tap OK
