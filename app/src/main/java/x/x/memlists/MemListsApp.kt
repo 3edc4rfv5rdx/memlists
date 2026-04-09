@@ -39,6 +39,7 @@ private object Routes {
     const val Lists = "lists"
     const val Settings = "settings"
     const val MemoNew = "memo_new"
+    const val MemoEdit = "memo_edit/{id}"
     const val ListNew = "list_new/{parentId}/{isFolder}"
     const val ListDetail = "list_detail/{listId}"
     const val EntryNew = "entry_new/{listId}"
@@ -51,6 +52,8 @@ private fun listNewRoute(parentId: Long?, isFolder: Boolean): String {
 }
 
 private fun listDetailRoute(listId: Long): String = "list_detail/$listId"
+
+private fun memoEditRoute(id: Long): String = "memo_edit/$id"
 
 private fun entryNewRoute(listId: Long): String = "entry_new/$listId"
 
@@ -140,6 +143,18 @@ fun MemListsApp() {
                             }
                             memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
                         }
+                    },
+                    onEditMemo = { item ->
+                        navController.navigate(memoEditRoute(item.id))
+                    },
+                    onDeleteMemo = { item ->
+                        memosScope.launch {
+                            withContext(Dispatchers.IO) {
+                                ReminderScheduler.cancelItem(memosApplication, item.id)
+                                memosApplication.repository.deleteMemo(item.id)
+                            }
+                            memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                        }
                     }
                 )
             }
@@ -157,6 +172,28 @@ fun MemListsApp() {
                         navController.previousBackStackEntry?.savedStateHandle?.set("memos_refresh", true)
                         navController.popBackStack()
                     }
+                )
+            }
+            composable(Routes.MemoEdit) { backStackEntry ->
+                val application = LocalContext.current.applicationContext as MemListsApplication
+                val memoId = backStackEntry.arguments?.getString("id")?.toLongOrNull()
+                if (memoId == null) {
+                    navController.popBackStack()
+                    return@composable
+                }
+                MemoEditorScreen(
+                    application = application,
+                    languageCode = uiState.settings.languageCode,
+                    timeMorning = uiState.settings.timeMorning,
+                    timeDay = uiState.settings.timeDay,
+                    timeEvening = uiState.settings.timeEvening,
+                    lw = lw,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaved = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("memos_refresh", true)
+                        navController.popBackStack()
+                    },
+                    memoId = memoId
                 )
             }
             composable(Routes.Lists) {

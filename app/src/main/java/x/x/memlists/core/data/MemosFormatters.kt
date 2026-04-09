@@ -39,6 +39,17 @@ fun formatTimes(timesJson: String?): String? {
     return if (times.isEmpty()) null else times.joinToString(", ")
 }
 
+fun formatDaysMask(daysMask: Int?): String? {
+    if (daysMask == null || daysMask == 0) return null
+    // Compact 7-char mask like "mtwtf--" (Mon..Sun), "-" for disabled days.
+    val letters = charArrayOf('m', 't', 'w', 't', 'f', 's', 's')
+    return buildString {
+        for (i in 0..6) {
+            append(if (daysMask and (1 shl i) != 0) letters[i] else '-')
+        }
+    }
+}
+
 private fun parseTimes(timesJson: String?): List<String> {
     if (timesJson.isNullOrBlank()) return emptyList()
     return runCatching {

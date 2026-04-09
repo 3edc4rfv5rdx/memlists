@@ -211,6 +211,92 @@ class MemListsRepository(
         databaseHelper.writableDatabase.insertOrThrow("items", null, values)
     }
 
+    suspend fun loadMemoForEdit(id: Long): MemoEditable? = withContext(Dispatchers.IO) {
+        databaseHelper.readableDatabase.query(
+            "items",
+            arrayOf(
+                "id", "title", "content", "tags", "priority",
+                "date", "reminder_type", "active", "time", "times",
+                "date_to", "days_mask", "sound", "fullscreen", "loop_sound",
+                "yearly", "monthly", "remove"
+            ),
+            "id = ?",
+            arrayOf(id.toString()),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            if (!cursor.moveToFirst()) return@withContext null
+            MemoEditable(
+                id = cursor.getLong(0),
+                title = cursor.getString(1) ?: "",
+                content = if (cursor.isNull(2)) null else cursor.getString(2),
+                tags = if (cursor.isNull(3)) null else cursor.getString(3),
+                priority = cursor.getInt(4),
+                date = if (cursor.isNull(5)) null else cursor.getInt(5),
+                reminderType = cursor.getInt(6),
+                active = cursor.getInt(7) == 1,
+                time = if (cursor.isNull(8)) null else cursor.getInt(8),
+                timesJson = if (cursor.isNull(9)) null else cursor.getString(9),
+                dateTo = if (cursor.isNull(10)) null else cursor.getInt(10),
+                daysMask = if (cursor.isNull(11)) null else cursor.getInt(11),
+                soundUri = if (cursor.isNull(12)) null else cursor.getString(12),
+                fullscreen = cursor.getInt(13) == 1,
+                loopSound = if (cursor.isNull(14)) true else cursor.getInt(14) == 1,
+                yearly = cursor.getInt(15) == 1,
+                monthly = cursor.getInt(16) == 1,
+                remove = cursor.getInt(17) == 1
+            )
+        }
+    }
+
+    suspend fun updateMemo(
+        id: Long,
+        title: String,
+        content: String?,
+        tags: String?,
+        priority: Int,
+        date: Int?,
+        reminderType: Int,
+        active: Boolean,
+        time: Int?,
+        timesJson: String?,
+        dateTo: Int?,
+        daysMask: Int?,
+        soundUri: String?,
+        fullscreen: Boolean,
+        loopSound: Boolean,
+        yearly: Boolean,
+        monthly: Boolean,
+        remove: Boolean
+    ) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            put("title", title)
+            put("content", content)
+            put("tags", tags)
+            put("priority", priority)
+            put("reminder_type", reminderType)
+            put("active", if (active) 1 else 0)
+            if (date == null) putNull("date") else put("date", date)
+            if (time == null) putNull("time") else put("time", time)
+            put("times", timesJson)
+            if (dateTo == null) putNull("date_to") else put("date_to", dateTo)
+            if (daysMask == null) putNull("days_mask") else put("days_mask", daysMask)
+            if (soundUri == null) putNull("sound") else put("sound", soundUri)
+            put("fullscreen", if (fullscreen) 1 else 0)
+            put("loop_sound", if (loopSound) 1 else 0)
+            put("yearly", if (yearly) 1 else 0)
+            put("monthly", if (monthly) 1 else 0)
+            put("remove", if (remove) 1 else 0)
+            putNull("period_done_until")
+        }
+        databaseHelper.writableDatabase.update("items", values, "id = ?", arrayOf(id.toString()))
+    }
+
+    suspend fun deleteMemo(id: Long) = withContext(Dispatchers.IO) {
+        databaseHelper.writableDatabase.delete("items", "id = ?", arrayOf(id.toString()))
+    }
+
     suspend fun toggleMemoActive(id: Long, currentActive: Boolean) = withContext(Dispatchers.IO) {
         val values = ContentValues().apply {
             put("active", if (currentActive) 0 else 1)

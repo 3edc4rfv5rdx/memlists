@@ -1,10 +1,16 @@
 package x.x.memlists.feature.memos
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Checkbox
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,27 +18,39 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import x.x.memlists.core.data.MemoFolderSummary
@@ -41,6 +59,7 @@ import x.x.memlists.core.data.MemoItemSummary
 import x.x.memlists.core.data.todayAsInt
 import x.x.memlists.core.data.firstDailyTime
 import x.x.memlists.core.data.formatDate
+import x.x.memlists.core.data.formatDaysMask
 import x.x.memlists.core.data.formatTime
 import x.x.memlists.core.data.formatTimes
 import x.x.memlists.core.theme.AppThemePalette
@@ -62,9 +81,57 @@ fun MemosHomeScreen(
     onOpenFolder: (MemoFolderType) -> Unit,
     onBackFromFolder: () -> Unit,
     onCloseRoot: () -> Unit,
-    onToggleActive: (MemoItemSummary) -> Unit = {}
+    onToggleActive: (MemoItemSummary) -> Unit = {},
+    onEditMemo: (MemoItemSummary) -> Unit = {},
+    onDeleteMemo: (MemoItemSummary) -> Unit = {}
 ) {
     val palette = LocalAppThemePalette.current
+    var pendingDelete by remember { mutableStateOf<MemoItemSummary?>(null) }
+    pendingDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            containerColor = palette.clMenu,
+            title = {
+                Text(
+                    text = lw("Delete memo") + "?",
+                    color = palette.clText,
+                    fontSize = UiTokens.fsMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = target.title,
+                    color = palette.clText,
+                    fontSize = UiTokens.fsNormal
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val toDelete = target
+                        pendingDelete = null
+                        onDeleteMemo(toDelete)
+                    },
+                    shape = UiTokens.shapeMedium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Red,
+                        contentColor = Color.White
+                    )
+                ) { Text(lw("Delete"), fontSize = UiTokens.fsNormal) }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { pendingDelete = null },
+                    shape = UiTokens.shapeMedium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    )
+                ) { Text(lw("Cancel"), fontSize = UiTokens.fsNormal) }
+            }
+        )
+    }
     val visibleItems = if (selectedFolder == null) {
         items.filter { it.reminderType == 1 && !it.monthly && !it.yearly }
     } else {
@@ -206,11 +273,13 @@ fun MemosHomeScreen(
                 }
             } else {
                 items(visibleItems, key = { it.id }) { item ->
-                    MemoItemCard(
+                    SwipeableMemoRow(
                         item = item,
                         lw = lw,
                         palette = palette,
-                        onToggleActive = { onToggleActive(item) }
+                        onToggleActive = { onToggleActive(item) },
+                        onEdit = { onEditMemo(item) },
+                        onRequestDelete = { pendingDelete = item }
                     )
                 }
             }
@@ -223,6 +292,102 @@ fun MemosHomeScreen(
                         onClick = { onOpenFolder(folder.type) }
                     )
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+private fun SwipeableMemoRow(
+    item: MemoItemSummary,
+    lw: (String) -> String,
+    palette: AppThemePalette,
+    onToggleActive: () -> Unit,
+    onEdit: () -> Unit,
+    onRequestDelete: () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState()
+    LaunchedEffect(dismissState.currentValue) {
+        when (dismissState.currentValue) {
+            SwipeToDismissBoxValue.StartToEnd -> {
+                onEdit()
+                dismissState.reset()
+            }
+            SwipeToDismissBoxValue.EndToStart -> {
+                onRequestDelete()
+                dismissState.reset()
+            }
+            SwipeToDismissBoxValue.Settled -> Unit
+        }
+    }
+    var contextMenuExpanded by remember { mutableStateOf(false) }
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val isEdit = direction == SwipeToDismissBoxValue.StartToEnd
+            val isDelete = direction == SwipeToDismissBoxValue.EndToStart
+            val bgColor = when {
+                isEdit -> palette.clSel
+                isDelete -> Color.Red
+                else -> Color.Transparent
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(bgColor, UiTokens.shapeLarge)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = if (isEdit) Alignment.CenterStart else Alignment.CenterEnd
+            ) {
+                when {
+                    isEdit -> Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = lw("Edit"),
+                        tint = palette.clText
+                    )
+                    isDelete -> Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = lw("Delete"),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    ) {
+        Box(
+            modifier = Modifier.combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {},
+                onLongClick = { contextMenuExpanded = true }
+            )
+        ) {
+            MemoItemCard(
+                item = item,
+                lw = lw,
+                palette = palette,
+                onToggleActive = onToggleActive
+            )
+            DropdownMenu(
+                expanded = contextMenuExpanded,
+                onDismissRequest = { contextMenuExpanded = false },
+                offset = DpOffset(x = 120.dp, y = 0.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(lw("Edit"), fontSize = UiTokens.fsNormal, color = palette.clText) },
+                    onClick = {
+                        contextMenuExpanded = false
+                        onEdit()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(lw("Delete"), fontSize = UiTokens.fsNormal, color = palette.clText) },
+                    onClick = {
+                        contextMenuExpanded = false
+                        onRequestDelete()
+                    }
+                )
             }
         }
     }
@@ -297,7 +462,7 @@ private fun MemoItemCard(
                     fontSize = UiTokens.fsNormal
                 )
             }
-            memoDetailsLine(item)?.let {
+            memoDetailsLine(item, lw)?.let {
                 Text(
                     text = it,
                     color = if (isToday || item.reminderType != 0) androidx.compose.ui.graphics.Color.Red else palette.clText.copy(alpha = 0.84f),
@@ -378,14 +543,20 @@ private fun MemoEmptyRow(
     }
 }
 
-private fun memoDetailsLine(item: MemoItemSummary): String? {
+private fun memoDetailsLine(item: MemoItemSummary, lw: (String) -> String): String? {
     return when (item.reminderType) {
-        2 -> formatTimes(item.timesJson)
-        3 -> listOfNotNull(
-            formatDate(item.date),
-            formatDate(item.dateTo)
-        ).joinToString(" - ").ifBlank {
-            formatTime(item.time)
+        2 -> {
+            val days = formatDaysMask(item.daysMask)
+            val times = formatTimes(item.timesJson)
+            listOfNotNull(days, times).joinToString("  ").ifBlank { null }
+        }
+        3 -> {
+            val range = listOfNotNull(formatDate(item.date), formatDate(item.dateTo))
+                .joinToString(" - ")
+                .ifBlank { null }
+            val days = formatDaysMask(item.daysMask)
+            val time = formatTime(item.time)
+            listOfNotNull(days, range, time).joinToString("  ").ifBlank { null }
         }
         else -> listOfNotNull(formatDate(item.date), formatTime(item.time)).joinToString("  ").ifBlank {
             firstDailyTime(item.timesJson)

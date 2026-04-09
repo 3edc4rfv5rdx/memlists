@@ -38,3 +38,24 @@ data class MemosHomeData(
     val folders: List<MemoFolderSummary> = emptyList()
 )
 
+data class MemoEditable(
+    val id: Long,
+    val title: String,
+    val content: String?,
+    val tags: String?,
+    val priority: Int,
+    val date: Int?,
+    val reminderType: Int,
+    val active: Boolean,
+    val time: Int?,
+    val timesJson: String?,
+    val dateTo: Int?,
+    val daysMask: Int?,
+    val soundUri: String?,
+    val fullscreen: Boolean,
+    val loopSound: Boolean,
+    val yearly: Boolean,
+    val monthly: Boolean,
+    val remove: Boolean
+)
+

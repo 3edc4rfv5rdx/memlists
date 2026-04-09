@@ -1,6 +1,9 @@
 #!/bin/sh
 
-apk="app/build/outputs/apk/debug/app-debug.apk"
+# Emulator is x86_64 — pick that split, fall back to universal, then anything
+apk=$(ls -t app/build/outputs/apk/debug/*-x86_64-debug.apk 2>/dev/null | head -1)
+[ -z "$apk" ] && apk=$(ls -t app/build/outputs/apk/debug/*-universal-debug.apk 2>/dev/null | head -1)
+[ -z "$apk" ] && apk=$(ls -t app/build/outputs/apk/debug/*-debug.apk 2>/dev/null | head -1)
 
 if [ -z "$apk" ]; then
     echo "No debug APK found"

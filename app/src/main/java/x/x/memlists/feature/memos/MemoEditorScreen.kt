@@ -84,6 +84,7 @@ import x.x.memlists.core.ui.SoundPickerRow
 import x.x.memlists.core.ui.loadCustomSounds
 import x.x.memlists.core.reminder.ReminderScheduler
 import x.x.memlists.core.reminder.ReminderPermissions
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.DisposableEffect
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -99,8 +100,10 @@ fun MemoEditorScreen(
     timeEvening: String = "18:30",
     lw: (String) -> String,
     onNavigateBack: () -> Unit,
-    onSaved: () -> Unit
+    onSaved: () -> Unit,
+    memoId: Long? = null
 ) {
+    val isEdit = memoId != null
     val palette = LocalAppThemePalette.current
     val context = LocalContext.current
     val focusRequester = remember { FocusRequester() }
@@ -164,10 +167,60 @@ fun MemoEditorScreen(
         onDispose { soundHelper.release() }
     }
 
+    // Force Back to close the editor in a single press — otherwise IME/focus
+    // dismissal can swallow the first 1–3 presses on some devices.
+    BackHandler(enabled = canSave) {
+        onNavigateBack()
+    }
+
     LaunchedEffect(Unit) {
         knownTags.clear()
         knownTags.addAll(application.repository.loadKnownTags())
-        focusRequester.requestFocus()
+        if (memoId != null) {
+            val loaded = application.repository.loadMemoForEdit(memoId)
+            if (loaded != null) {
+                title = loaded.title
+                content = loaded.content.orEmpty()
+                tags = loaded.tags.orEmpty()
+                priority = loaded.priority
+                soundUri = loaded.soundUri
+                fullscreenAlert = loaded.fullscreen
+                loopSound = loaded.loopSound
+                if (loaded.reminderType == 0) {
+                    remindersEnabled = false
+                    dateText = formatDateForInput(loaded.date)
+                } else {
+                    remindersEnabled = true
+                    reminderActive = loaded.active
+                    reminderType = when (loaded.reminderType) {
+                        2 -> ReminderType.Daily
+                        3 -> ReminderType.Period
+                        else -> ReminderType.OneTime
+                    }
+                    reminderTimeText = formatTimeForInput(loaded.time)
+                    when (reminderType) {
+                        ReminderType.OneTime -> {
+                            dateText = formatDateForInput(loaded.date)
+                            yearlyRepeat = loaded.yearly
+                            monthlyRepeat = loaded.monthly
+                            autoRemove = loaded.remove
+                        }
+                        ReminderType.Daily -> {
+                            dailyTimes.clear()
+                            dailyTimes.addAll(parseTimesJson(loaded.timesJson))
+                            daysMask = loaded.daysMask ?: 0
+                        }
+                        ReminderType.Period -> {
+                            periodFromText = formatPeriodForInput(loaded.date)
+                            periodToText = formatPeriodForInput(loaded.dateTo)
+                            daysMask = loaded.daysMask ?: 0
+                        }
+                    }
+                }
+            }
+        } else {
+            focusRequester.requestFocus()
+        }
     }
 
     fun showValidation(message: String) {
@@ -224,33 +277,72 @@ fun MemoEditorScreen(
             } else {
                 canSave = false
                 scope.launch {
-                    val itemId = application.repository.insertMemo(
-                        title = trimmedTitle,
-                        content = content.trim().ifBlank { null },
-                        tags = tags.trim().ifBlank { null },
-                        priority = priority,
-                        date = when {
-                            !remindersEnabled -> parsedDate
-                            reminderType == ReminderType.Period -> parsedPeriodFrom
-                            else -> parsedDate
-                        },
-                        reminderType = if (remindersEnabled) reminderType.dbValue else 0,
-                        active = if (remindersEnabled) reminderActive else true,
-                        time = if (remindersEnabled) parsedReminderTime else null,
-                        timesJson = if (remindersEnabled && reminderType == ReminderType.Daily) {
-                            toTimesJson(dailyTimes)
-                        } else {
-                            null
-                        },
-                        dateTo = if (remindersEnabled && reminderType == ReminderType.Period) parsedPeriodTo else null,
-                        daysMask = if (remindersEnabled && reminderType != ReminderType.OneTime) daysMask else null,
-                        soundUri = if (remindersEnabled) soundUri else null,
-                        fullscreen = remindersEnabled && fullscreenAlert,
-                        loopSound = remindersEnabled && if (fullscreenAlert) loopSound else true,
-                        yearly = remindersEnabled && reminderType == ReminderType.OneTime && yearlyRepeat,
-                        monthly = remindersEnabled && reminderType == ReminderType.OneTime && monthlyRepeat,
-                        remove = remindersEnabled && reminderType == ReminderType.OneTime && autoRemove && !yearlyRepeat && !monthlyRepeat
-                    )
+                    val resolvedDate = when {
+                        !remindersEnabled -> parsedDate
+                        reminderType == ReminderType.Period -> parsedPeriodFrom
+                        else -> parsedDate
+                    }
+                    val resolvedReminderType = if (remindersEnabled) reminderType.dbValue else 0
+                    val resolvedActive = if (remindersEnabled) reminderActive else true
+                    val resolvedTime = if (remindersEnabled) parsedReminderTime else null
+                    val resolvedTimesJson = if (remindersEnabled && reminderType == ReminderType.Daily) {
+                        toTimesJson(dailyTimes)
+                    } else {
+                        null
+                    }
+                    val resolvedDateTo = if (remindersEnabled && reminderType == ReminderType.Period) parsedPeriodTo else null
+                    val resolvedDaysMask = if (remindersEnabled && reminderType != ReminderType.OneTime) daysMask else null
+                    val resolvedSoundUri = if (remindersEnabled) soundUri else null
+                    val resolvedFullscreen = remindersEnabled && fullscreenAlert
+                    val resolvedLoopSound = remindersEnabled && if (fullscreenAlert) loopSound else true
+                    val resolvedYearly = remindersEnabled && reminderType == ReminderType.OneTime && yearlyRepeat
+                    val resolvedMonthly = remindersEnabled && reminderType == ReminderType.OneTime && monthlyRepeat
+                    val resolvedRemove = remindersEnabled && reminderType == ReminderType.OneTime && autoRemove && !yearlyRepeat && !monthlyRepeat
+
+                    val itemId: Long = if (memoId != null) {
+                        application.repository.updateMemo(
+                            id = memoId,
+                            title = trimmedTitle,
+                            content = content.trim().ifBlank { null },
+                            tags = tags.trim().ifBlank { null },
+                            priority = priority,
+                            date = resolvedDate,
+                            reminderType = resolvedReminderType,
+                            active = resolvedActive,
+                            time = resolvedTime,
+                            timesJson = resolvedTimesJson,
+                            dateTo = resolvedDateTo,
+                            daysMask = resolvedDaysMask,
+                            soundUri = resolvedSoundUri,
+                            fullscreen = resolvedFullscreen,
+                            loopSound = resolvedLoopSound,
+                            yearly = resolvedYearly,
+                            monthly = resolvedMonthly,
+                            remove = resolvedRemove
+                        )
+                        ReminderScheduler.cancelItem(context, memoId)
+                        memoId
+                    } else {
+                        application.repository.insertMemo(
+                            title = trimmedTitle,
+                            content = content.trim().ifBlank { null },
+                            tags = tags.trim().ifBlank { null },
+                            priority = priority,
+                            date = resolvedDate,
+                            reminderType = resolvedReminderType,
+                            active = resolvedActive,
+                            time = resolvedTime,
+                            timesJson = resolvedTimesJson,
+                            dateTo = resolvedDateTo,
+                            daysMask = resolvedDaysMask,
+                            soundUri = resolvedSoundUri,
+                            fullscreen = resolvedFullscreen,
+                            loopSound = resolvedLoopSound,
+                            yearly = resolvedYearly,
+                            monthly = resolvedMonthly,
+                            remove = resolvedRemove
+                        )
+                    }
                     if (remindersEnabled && itemId > 0) {
                         ReminderScheduler.scheduleItem(context, application.repository, itemId)
                         // Ensure runtime permissions for fullscreen alerts on Samsung/Android 14+
@@ -284,7 +376,7 @@ fun MemoEditorScreen(
     }
 
     ScreenScaffold(
-        title = lw("NewItem"),
+        title = lw(if (isEdit) "EditItem" else "NewItem"),
         navigationButtonMode = NavigationButtonMode.Back,
         onNavigateBack = onNavigateBack,
         snackbarHostState = snackbarHostState,
@@ -978,7 +1070,9 @@ private fun DailyTimesEditor(
             )
             FilledIconButton(
                 onClick = {
-                    val initial = parseTimeOrDefault(times.lastOrNull())
+                    // Always start picker from current wall time for daily, not
+                    // the last added time — user expected "now" here.
+                    val initial = parseTimeOrDefault(null)
                     val dialog = TimePickerDialog(
                         pickerContext,
                         pickerThemeResId(palette),
@@ -1204,6 +1298,36 @@ private fun appendTag(currentTags: String, tag: String): String {
         current += cleanTag
     }
     return current.joinToString(", ")
+}
+
+private fun formatDateForInput(value: Int?): String {
+    if (value == null || value <= 0) return ""
+    val s = value.toString().padStart(8, '0')
+    if (s.length != 8) return ""
+    return "${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}"
+}
+
+private fun formatTimeForInput(value: Int?): String {
+    if (value == null) return ""
+    val hh = (value / 100).coerceIn(0, 23)
+    val mm = (value % 100).coerceIn(0, 59)
+    return "%02d:%02d".format(hh, mm)
+}
+
+/** Period field: 1..31 → day-of-month, YYYYMMDD → full date. */
+private fun formatPeriodForInput(value: Int?): String {
+    if (value == null || value <= 0) return ""
+    return if (value in 1..31) value.toString() else formatDateForInput(value)
+}
+
+private fun parseTimesJson(json: String?): List<String> {
+    if (json.isNullOrBlank()) return emptyList()
+    return json
+        .removePrefix("[")
+        .removeSuffix("]")
+        .split(",")
+        .map { it.trim().trim('"') }
+        .filter { it.isNotBlank() }
 }
 
 private fun toTimesJson(times: List<String>): String {
