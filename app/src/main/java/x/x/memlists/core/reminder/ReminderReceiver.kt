@@ -64,7 +64,7 @@ class ReminderReceiver : BroadcastReceiver() {
         }
 
         val sound = item.sound ?: repo.getDefaultSoundSync()
-        val repeatCount = repo.getSoundRepeatsSync()
+        val repeatCount = if (item.loopSound == 1) repo.getSoundRepeatsSync() else 1
         Log.d(TAG, "handleSpecific item=$itemId loopSound=${item.loopSound} repeatCount=$repeatCount fullscreen=${item.fullscreen}")
 
         if (item.fullscreen == 1) {
@@ -110,7 +110,7 @@ class ReminderReceiver : BroadcastReceiver() {
         }
 
         val sound = item.sound ?: repo.getDefaultSoundSync()
-        val repeatCount = repo.getSoundRepeatsSync()
+        val repeatCount = if (item.loopSound == 1) repo.getSoundRepeatsSync() else 1
 
         if (item.fullscreen == 1) {
             launchFullscreen(context, item, sound, repeatCount, isDaily = true)
@@ -155,7 +155,7 @@ class ReminderReceiver : BroadcastReceiver() {
         }
 
         val sound = item.sound ?: repo.getDefaultSoundSync()
-        val repeatCount = repo.getSoundRepeatsSync()
+        val repeatCount = if (item.loopSound == 1) repo.getSoundRepeatsSync() else 1
 
         if (item.fullscreen == 1) {
             val isMonthlyPeriod = item.date != null && item.date in 1..31
@@ -181,7 +181,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val repo = getRepository(context)
         val item = repo.getItemByIdSync(itemId.toLong())
         val loopSound = item?.loopSound == 1
-        val repeatCount = repo.getSoundRepeatsSync()
+        val repeatCount = if (loopSound) repo.getSoundRepeatsSync() else 1
 
         val isPeriod = item?.reminderType == 3
         val isMonthlyPeriod = isPeriod && item.date != null && item.date in 1..31
