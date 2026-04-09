@@ -37,6 +37,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -306,7 +307,7 @@ fun MemoEditorScreen(
                     val resolvedDaysMask = if (remindersEnabled && reminderType != ReminderType.OneTime) daysMask else null
                     val resolvedSoundUri = if (remindersEnabled) soundUri else null
                     val resolvedFullscreen = remindersEnabled && fullscreenAlert
-                    val resolvedLoopSound = remindersEnabled && if (fullscreenAlert) loopSound else true
+                    val resolvedLoopSound = remindersEnabled && loopSound
                     val resolvedYearly = remindersEnabled && reminderType == ReminderType.OneTime && yearlyRepeat
                     val resolvedMonthly = remindersEnabled && reminderType == ReminderType.OneTime && monthlyRepeat
                     val resolvedRemove = remindersEnabled && reminderType == ReminderType.OneTime && autoRemove && !yearlyRepeat && !monthlyRepeat
@@ -757,143 +758,293 @@ private fun ReminderSection(
                     text = lw("Active"),
                     onCheckedChange = onReminderActiveChange
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    ReminderType.entries.forEach { type ->
-                        Row(
-                            modifier = Modifier.heightIn(min = 36.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = reminderType == type,
-                                onClick = { onReminderTypeChange(type) },
-                                modifier = Modifier.padding(0.dp),
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = palette.clText,
-                                    unselectedColor = palette.clText
-                                )
-                            )
-                            Text(
-                                text = lw(type.labelKey),
-                                color = palette.clText,
-                                fontSize = UiTokens.fsNormal
-                            )
-                        }
-                    }
-                }
                 ToggleRow(
                     checked = fullscreenAlert,
                     text = lw("Fullscreen alert"),
                     onCheckedChange = onFullscreenAlertChange
                 )
-                if (fullscreenAlert) {
-                    ToggleRow(
-                        checked = loopSound,
-                        text = lw("Loop sound"),
-                        onCheckedChange = onLoopSoundChange
-                    )
-                }
-                SoundPickerRow(
+                ReminderGroupDivider()
+                ReminderTypeSelector(
+                    reminderType = reminderType,
                     lw = lw,
-                    currentUri = soundUri,
-                    systemSounds = systemSounds,
-                    customSounds = customSounds,
-                    playingUri = playingUri,
-                    onSoundSelected = onSoundSelected,
-                    onPlay = onPlay,
-                    onStop = onStop,
-                    onPickFile = onPickSoundFile,
-                    palette = palette
+                    onReminderTypeChange = onReminderTypeChange
                 )
+                ReminderGroupDivider()
                 when (reminderType) {
                     ReminderType.OneTime -> {
-                        TimeInputField(
-                            value = reminderTimeText,
-                            label = lw("Time"),
+                        ReminderOneTimeScheduleBlock(
+                            reminderTimeText = reminderTimeText,
                             lw = lw,
                             pickerContext = pickerContext,
-                            onValueChange = onReminderTimeChange,
-                            onClear = { onReminderTimeChange("") }
-                        )
-                        PresetTimeRow(
-                            lw = lw,
+                            onReminderTimeChange = onReminderTimeChange,
                             timeMorning = timeMorning,
                             timeDay = timeDay,
                             timeEvening = timeEvening,
-                            onSelect = onReminderTimeChange
-                        )
-                        ToggleRow(
-                            checked = monthlyRepeat,
-                            text = lw("Monthly repeat"),
-                            onCheckedChange = onMonthlyRepeatChange
-                        )
-                        ToggleRow(
-                            checked = yearlyRepeat,
-                            text = lw("Yearly repeat"),
-                            onCheckedChange = onYearlyRepeatChange
-                        )
-                        ToggleRow(
-                            checked = autoRemove,
-                            text = lw("Auto-remove after firing"),
-                            enabled = !yearlyRepeat && !monthlyRepeat,
-                            onCheckedChange = onAutoRemoveChange
+                            monthlyRepeat = monthlyRepeat,
+                            yearlyRepeat = yearlyRepeat,
+                            autoRemove = autoRemove,
+                            onMonthlyRepeatChange = onMonthlyRepeatChange,
+                            onYearlyRepeatChange = onYearlyRepeatChange,
+                            onAutoRemoveChange = onAutoRemoveChange
                         )
                     }
                     ReminderType.Daily -> {
-                        DailyTimesEditor(
+                        ReminderDailyScheduleBlock(
                             times = dailyTimes,
                             lw = lw,
                             pickerContext = pickerContext,
                             onAddTime = onAddDailyTime,
-                            onRemoveTime = onRemoveDailyTime
-                        )
-                        DaysMaskEditor(
+                            onRemoveTime = onRemoveDailyTime,
                             daysMask = daysMask,
-                            lw = lw,
                             onDaysMaskChange = onDaysMaskChange
                         )
                     }
                     ReminderType.Period -> {
-                        DateInputField(
-                            value = periodFromText,
-                            label = lw("From"),
+                        ReminderPeriodScheduleBlock(
+                            periodFromText = periodFromText,
+                            periodToText = periodToText,
+                            reminderTimeText = reminderTimeText,
                             lw = lw,
                             pickerContext = pickerContext,
-                            onValueChange = { onPeriodFromChange(normalizePeriodInput(it)) },
-                            onClear = { onPeriodFromChange("") }
-                        )
-                        DateInputField(
-                            value = periodToText,
-                            label = lw("To"),
-                            lw = lw,
-                            pickerContext = pickerContext,
-                            onValueChange = { onPeriodToChange(normalizePeriodInput(it)) },
-                            onClear = { onPeriodToChange("") }
-                        )
-                        TimeInputField(
-                            value = reminderTimeText,
-                            label = lw("Time"),
-                            lw = lw,
-                            pickerContext = pickerContext,
-                            onValueChange = onReminderTimeChange,
-                            onClear = { onReminderTimeChange("") }
-                        )
-                        PresetTimeRow(
-                            lw = lw,
                             timeMorning = timeMorning,
                             timeDay = timeDay,
                             timeEvening = timeEvening,
-                            onSelect = onReminderTimeChange
-                        )
-                        DaysMaskEditor(
                             daysMask = daysMask,
-                            lw = lw,
+                            onPeriodFromChange = onPeriodFromChange,
+                            onPeriodToChange = onPeriodToChange,
+                            onReminderTimeChange = onReminderTimeChange,
                             onDaysMaskChange = onDaysMaskChange
                         )
                     }
                 }
+                ReminderGroupDivider()
+                ReminderAlertBehaviorBlock(
+                    lw = lw,
+                    soundUri = soundUri,
+                    systemSounds = systemSounds,
+                    customSounds = customSounds,
+                    playingUri = playingUri,
+                    fullscreenAlert = fullscreenAlert,
+                    loopSound = loopSound,
+                    onSoundSelected = onSoundSelected,
+                    onPlay = onPlay,
+                    onStop = onStop,
+                    onPickSoundFile = onPickSoundFile,
+                    onFullscreenAlertChange = onFullscreenAlertChange,
+                    onLoopSoundChange = onLoopSoundChange
+                )
             }
         }
     }
+}
+
+@Composable
+private fun ReminderTypeSelector(
+    reminderType: ReminderType,
+    lw: (String) -> String,
+    onReminderTypeChange: (ReminderType) -> Unit
+) {
+    val palette = LocalAppThemePalette.current
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        ReminderType.entries.forEach { type ->
+            Row(
+                modifier = Modifier.heightIn(min = 36.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = reminderType == type,
+                    onClick = { onReminderTypeChange(type) },
+                    modifier = Modifier.padding(0.dp),
+                    colors = RadioButtonDefaults.colors(
+                        selectedColor = palette.clText,
+                        unselectedColor = palette.clText
+                    )
+                )
+                Text(
+                    text = lw(type.labelKey),
+                    color = palette.clText,
+                    fontSize = UiTokens.fsNormal
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReminderOneTimeScheduleBlock(
+    reminderTimeText: String,
+    lw: (String) -> String,
+    pickerContext: Context,
+    onReminderTimeChange: (String) -> Unit,
+    timeMorning: String,
+    timeDay: String,
+    timeEvening: String,
+    monthlyRepeat: Boolean,
+    yearlyRepeat: Boolean,
+    autoRemove: Boolean,
+    onMonthlyRepeatChange: (Boolean) -> Unit,
+    onYearlyRepeatChange: (Boolean) -> Unit,
+    onAutoRemoveChange: (Boolean) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        TimeInputField(
+            value = reminderTimeText,
+            label = lw("Time"),
+            lw = lw,
+            pickerContext = pickerContext,
+            onValueChange = onReminderTimeChange,
+            onClear = { onReminderTimeChange("") }
+        )
+        PresetTimeRow(
+            lw = lw,
+            timeMorning = timeMorning,
+            timeDay = timeDay,
+            timeEvening = timeEvening,
+            onSelect = onReminderTimeChange
+        )
+        ToggleRow(
+            checked = monthlyRepeat,
+            text = lw("Monthly repeat"),
+            onCheckedChange = onMonthlyRepeatChange
+        )
+        ToggleRow(
+            checked = yearlyRepeat,
+            text = lw("Yearly repeat"),
+            onCheckedChange = onYearlyRepeatChange
+        )
+        ToggleRow(
+            checked = autoRemove,
+            text = lw("Auto-remove after firing"),
+            enabled = !yearlyRepeat && !monthlyRepeat,
+            onCheckedChange = onAutoRemoveChange
+        )
+    }
+}
+
+@Composable
+private fun ReminderDailyScheduleBlock(
+    times: List<String>,
+    lw: (String) -> String,
+    pickerContext: Context,
+    onAddTime: (String) -> Unit,
+    onRemoveTime: (String) -> Unit,
+    daysMask: Int,
+    onDaysMaskChange: (Int) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        DailyTimesEditor(
+            times = times,
+            lw = lw,
+            pickerContext = pickerContext,
+            onAddTime = onAddTime,
+            onRemoveTime = onRemoveTime
+        )
+        DaysMaskEditor(
+            daysMask = daysMask,
+            lw = lw,
+            onDaysMaskChange = onDaysMaskChange
+        )
+    }
+}
+
+@Composable
+private fun ReminderPeriodScheduleBlock(
+    periodFromText: String,
+    periodToText: String,
+    reminderTimeText: String,
+    lw: (String) -> String,
+    pickerContext: Context,
+    timeMorning: String,
+    timeDay: String,
+    timeEvening: String,
+    daysMask: Int,
+    onPeriodFromChange: (String) -> Unit,
+    onPeriodToChange: (String) -> Unit,
+    onReminderTimeChange: (String) -> Unit,
+    onDaysMaskChange: (Int) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        DateInputField(
+            value = periodFromText,
+            label = lw("From"),
+            lw = lw,
+            pickerContext = pickerContext,
+            onValueChange = { onPeriodFromChange(normalizePeriodInput(it)) },
+            onClear = { onPeriodFromChange("") }
+        )
+        DateInputField(
+            value = periodToText,
+            label = lw("To"),
+            lw = lw,
+            pickerContext = pickerContext,
+            onValueChange = { onPeriodToChange(normalizePeriodInput(it)) },
+            onClear = { onPeriodToChange("") }
+        )
+        TimeInputField(
+            value = reminderTimeText,
+            label = lw("Time"),
+            lw = lw,
+            pickerContext = pickerContext,
+            onValueChange = onReminderTimeChange,
+            onClear = { onReminderTimeChange("") }
+        )
+        PresetTimeRow(
+            lw = lw,
+            timeMorning = timeMorning,
+            timeDay = timeDay,
+            timeEvening = timeEvening,
+            onSelect = onReminderTimeChange
+        )
+        DaysMaskEditor(
+            daysMask = daysMask,
+            lw = lw,
+            onDaysMaskChange = onDaysMaskChange
+        )
+    }
+}
+
+@Composable
+private fun ReminderAlertBehaviorBlock(
+    lw: (String) -> String,
+    soundUri: String?,
+    systemSounds: List<SoundItem>,
+    customSounds: List<SoundItem>,
+    playingUri: String?,
+    fullscreenAlert: Boolean,
+    loopSound: Boolean,
+    onSoundSelected: (String?) -> Unit,
+    onPlay: (String) -> Unit,
+    onStop: () -> Unit,
+    onPickSoundFile: () -> Unit,
+    onFullscreenAlertChange: (Boolean) -> Unit,
+    onLoopSoundChange: (Boolean) -> Unit
+) {
+    val palette = LocalAppThemePalette.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ToggleRow(
+            checked = loopSound,
+            text = lw("Loop sound"),
+            onCheckedChange = onLoopSoundChange
+        )
+        SoundPickerRow(
+            lw = lw,
+            currentUri = soundUri,
+            systemSounds = systemSounds,
+            customSounds = customSounds,
+            playingUri = playingUri,
+            onSoundSelected = onSoundSelected,
+            onPlay = onPlay,
+            onStop = onStop,
+            onPickFile = onPickSoundFile,
+            palette = palette
+        )
+    }
+}
+
+@Composable
+private fun ReminderGroupDivider() {
+    val palette = LocalAppThemePalette.current
+    HorizontalDivider(color = palette.clText.copy(alpha = 0.12f))
 }
 
 @Composable
