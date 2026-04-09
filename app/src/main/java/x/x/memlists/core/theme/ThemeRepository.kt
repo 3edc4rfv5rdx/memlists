@@ -29,4 +29,3 @@ class ThemeRepository(
         return themes.firstOrNull { it.name == name } ?: themes.first()
     }
 }
-

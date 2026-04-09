@@ -11,4 +11,3 @@ data class AppThemePalette(
     val clSel: Color,
     val clMenu: Color
 )
-
