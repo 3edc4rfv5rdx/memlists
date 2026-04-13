@@ -46,7 +46,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -341,20 +340,16 @@ private fun SwipeableMemoRow(
     onEdit: () -> Unit,
     onRequestDelete: () -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState()
-    LaunchedEffect(dismissState.currentValue) {
-        when (dismissState.currentValue) {
-            SwipeToDismissBoxValue.StartToEnd -> {
-                onEdit()
-                dismissState.reset()
+    @Suppress("DEPRECATION")
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> { onEdit(); false }
+                SwipeToDismissBoxValue.EndToStart -> { onRequestDelete(); false }
+                else -> true
             }
-            SwipeToDismissBoxValue.EndToStart -> {
-                onRequestDelete()
-                dismissState.reset()
-            }
-            SwipeToDismissBoxValue.Settled -> Unit
         }
-    }
+    )
     var contextMenuExpanded by remember { mutableStateOf(false) }
     SwipeToDismissBox(
         state = dismissState,

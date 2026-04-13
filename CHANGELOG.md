@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- E Fix Back navigation from MemoEditor: SwipeableMemoRow used LaunchedEffect(dismissState.currentValue) with reset() after onEdit(), but reset() never executed because the composable left composition on navigation. On return via Back, the stale StartToEnd state re-triggered onEdit() creating an infinite loop. Replaced with confirmValueChange that returns false (auto-resets state) and added launchSingleTop=true to prevent duplicate back-stack entries. Simplified MemoEditor BackHandler comments
 - N Home app-bar alarm button now opens a compact "Check Reminders" dialog with today's active reminder events, sorted by time. The dialog uses a lighter background dim and shows one line per event in the form `- time: title comment`, plus an empty-state message when nothing is due today
 - F Reminder editor UI pass: regroup reminder settings into a clearer flow. `Active` and `Fullscreen alert` stay at the top as core reminder properties; type-specific schedule controls are split into small local composables; `Loop sound` is always visible and now behaves as a real saved setting for any reminder instead of being forced on when fullscreen is off
 - E Android 15 / IME follow-up: MainActivity now calls `enableEdgeToEdge()`, and legacy `windowSoftInputMode="adjustResize"` was removed from the manifest. This switches the app onto the modern edge-to-edge/insets path instead of mixing enforced edge-to-edge with old resize-based IME handling

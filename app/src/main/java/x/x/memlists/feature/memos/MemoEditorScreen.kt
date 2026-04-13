@@ -171,15 +171,9 @@ fun MemoEditorScreen(
         onDispose { soundHelper.release() }
     }
 
-    // Always-on BackHandler. While saving (canSave=false) we MUST still intercept
-    // Back, otherwise it falls through to the NavController and pops the stack —
-    // then the save coroutine's onSaved() pops a second time, leaving an empty
-    // stack and a blank white screen. Idempotent popIfOnTop() in MemListsApp is
-    // the second line of defense for the same race.
     BackHandler(enabled = true) {
-        Log.d("MemoEditor", "BackHandler invoked, canSave=$canSave")
         if (canSave) onNavigateBack()
-        // else: swallow — save coroutine will navigate when it finishes
+        // else: swallow Back during save to prevent double-pop race
     }
 
     LaunchedEffect(Unit) {

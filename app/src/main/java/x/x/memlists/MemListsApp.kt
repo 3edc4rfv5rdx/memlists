@@ -198,7 +198,9 @@ fun MemListsApp() {
                         }
                     },
                     onEditMemo = { item ->
-                        navController.navigate(memoEditRoute(item.id))
+                        navController.navigate(memoEditRoute(item.id)) {
+                            launchSingleTop = true
+                        }
                     },
                     onDeleteMemo = { item ->
                         memosScope.launch {
