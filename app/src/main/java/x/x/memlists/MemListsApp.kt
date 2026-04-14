@@ -427,7 +427,19 @@ fun MemListsApp() {
                     onTimeDayChanged = viewModel::updateTimeDay,
                     onTimeEveningChanged = viewModel::updateTimeEvening,
                     onDefaultSoundChanged = viewModel::updateDefaultSound,
-                    onSoundRepeatsChanged = viewModel::updateSoundRepeats
+                    onSoundRepeatsChanged = viewModel::updateSoundRepeats,
+                    onRestoreComplete = {
+                        viewModel.reloadAfterRestore {
+                            runCatching {
+                                navController.getBackStackEntry(Routes.Memos)
+                                    .savedStateHandle["memos_refresh"] = true
+                            }
+                            runCatching {
+                                navController.getBackStackEntry(Routes.Lists)
+                                    .savedStateHandle["lists_refresh"] = true
+                            }
+                        }
+                    }
                 )
             }
         }

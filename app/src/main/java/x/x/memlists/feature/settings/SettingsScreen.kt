@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -26,20 +28,32 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import x.x.memlists.MemListsApplication
+import x.x.memlists.core.backup.BackupInfo
+import x.x.memlists.core.backup.BackupManager
+import x.x.memlists.core.backup.StoragePermission
 import x.x.memlists.core.data.SettingsData
+import x.x.memlists.core.reminder.ReminderScheduler
+import x.x.memlists.core.reminder.ReminderSoundService
 import x.x.memlists.core.i18n.LanguageOption
 import x.x.memlists.core.sound.SoundHelper
 import x.x.memlists.core.sound.SoundItem
@@ -47,6 +61,8 @@ import x.x.memlists.core.theme.AppThemePalette
 import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.CompactOutlinedField
 import x.x.memlists.core.ui.DropdownCard
+import x.x.memlists.core.ui.SnackbarTone
+import x.x.memlists.core.ui.showThemedSnackbar
 import x.x.memlists.core.ui.SoundPickerCard
 import x.x.memlists.core.ui.loadCustomSounds
 import x.x.memlists.core.ui.NavigationButtonMode
@@ -79,13 +95,23 @@ fun SettingsScreen(
     onTimeDayChanged: (String) -> Unit,
     onTimeEveningChanged: (String) -> Unit,
     onDefaultSoundChanged: (String?) -> Unit,
-    onSoundRepeatsChanged: (Int) -> Unit
+    onSoundRepeatsChanged: (Int) -> Unit,
+    onRestoreComplete: () -> Unit = {}
 ) {
     val palette = LocalAppThemePalette.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val soundHelper = remember { SoundHelper(context) }
     val systemSounds = remember { soundHelper.getSystemSounds() }
     var playingUri by remember { mutableStateOf<String?>(null) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
+    var backups by remember { mutableStateOf<List<BackupInfo>>(emptyList()) }
+    var pendingRestore by remember { mutableStateOf<BackupInfo?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { /* no-op: user returns to settings, can tap again */ }
 
     soundHelper.onPlaybackComplete = { playingUri = null }
 
@@ -121,6 +147,7 @@ fun SettingsScreen(
     ScreenScaffold(
         title = lw("Settings"),
         navigationButtonMode = NavigationButtonMode.Back,
+        snackbarHostState = snackbarHostState,
         onNavigateBack = {
             soundHelper.stop()
             onNavigateBack()
@@ -222,8 +249,181 @@ fun SettingsScreen(
                 onValueChanged = onSoundRepeatsChanged,
                 palette = palette
             )
+
+            SectionTitle(title = lw("Backup & Restore"))
+
+            ActionRowCard(
+                label = lw("Create backup"),
+                palette = palette,
+                onClick = {
+                    if (!StoragePermission.hasAllFilesAccess()) {
+                        permissionLauncher.launch(StoragePermission.requestAllFilesAccessIntent(context))
+                        return@ActionRowCard
+                    }
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) { BackupManager.createBackup(context) }
+                        if (result.isSuccess) {
+                            snackbarHostState.showThemedSnackbar(
+                                message = lw("Backup saved"),
+                                tone = SnackbarTone.Success
+                            )
+                        } else {
+                            snackbarHostState.showThemedSnackbar(
+                                message = lw("Backup failed"),
+                                tone = SnackbarTone.Error
+                            )
+                        }
+                    }
+                }
+            )
+
+            ActionRowCard(
+                label = lw("Restore from backup"),
+                palette = palette,
+                onClick = {
+                    if (!StoragePermission.hasAllFilesAccess()) {
+                        permissionLauncher.launch(StoragePermission.requestAllFilesAccessIntent(context))
+                        return@ActionRowCard
+                    }
+                    scope.launch {
+                        val list = withContext(Dispatchers.IO) { BackupManager.listBackups() }
+                        if (list.isEmpty()) {
+                            snackbarHostState.showThemedSnackbar(
+                                message = lw("No backups found"),
+                                tone = SnackbarTone.Caution
+                            )
+                        } else {
+                            backups = list
+                            showRestoreDialog = true
+                        }
+                    }
+                }
+            )
+        }
+
+        if (showRestoreDialog) {
+            BackupListDialog(
+                title = lw("Select backup"),
+                cancelText = lw("Cancel"),
+                backups = backups,
+                palette = palette,
+                onSelect = { info ->
+                    showRestoreDialog = false
+                    pendingRestore = info
+                },
+                onDismiss = { showRestoreDialog = false }
+            )
+        }
+
+        pendingRestore?.let { info ->
+            AlertDialog(
+                onDismissRequest = { pendingRestore = null },
+                containerColor = palette.clFill,
+                titleContentColor = palette.clText,
+                textContentColor = palette.clText,
+                title = { Text(info.label) },
+                text = { Text(lw("Will replace all current data. Continue?")) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val target = info
+                        pendingRestore = null
+                        scope.launch {
+                            val app = context.applicationContext as MemListsApplication
+                            val result = withContext(Dispatchers.IO) {
+                                ReminderScheduler.cancelAll(context, app.repository)
+                                ReminderSoundService.stop(context)
+                                BackupManager.restoreBackup(context, target.dir)
+                            }
+                            if (result.isSuccess) {
+                                onRestoreComplete()
+                                snackbarHostState.showThemedSnackbar(
+                                    message = lw("Restore complete"),
+                                    tone = SnackbarTone.Success
+                                )
+                            } else {
+                                snackbarHostState.showThemedSnackbar(
+                                    message = lw("Restore failed"),
+                                    tone = SnackbarTone.Error
+                                )
+                            }
+                        }
+                    }) { Text(lw("Apply"), color = palette.clText) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingRestore = null }) {
+                        Text(lw("Cancel"), color = palette.clText)
+                    }
+                }
+            )
         }
     }
+}
+
+@Composable
+private fun ActionRowCard(
+    label: String,
+    palette: AppThemePalette,
+    onClick: () -> Unit
+) {
+    Card(
+        shape = UiTokens.shapeLarge,
+        colors = CardDefaults.cardColors(containerColor = palette.clFill),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                fontSize = UiTokens.fsNormal,
+                color = palette.clText
+            )
+        }
+    }
+}
+
+@Composable
+private fun BackupListDialog(
+    title: String,
+    cancelText: String,
+    backups: List<BackupInfo>,
+    palette: AppThemePalette,
+    onSelect: (BackupInfo) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = palette.clFill,
+        titleContentColor = palette.clText,
+        textContentColor = palette.clText,
+        title = { Text(title) },
+        text = {
+            Column {
+                backups.forEach { info ->
+                    Text(
+                        text = info.label,
+                        fontSize = UiTokens.fsNormal,
+                        color = palette.clText,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(info) }
+                            .padding(vertical = 10.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(cancelText, color = palette.clText)
+            }
+        }
+    )
 }
 
 @Composable

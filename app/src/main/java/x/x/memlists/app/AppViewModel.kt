@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import x.x.memlists.core.data.SettingsData
 import x.x.memlists.core.reminder.ReminderMaintenance
 import x.x.memlists.core.reminder.ReminderScheduler
@@ -55,6 +56,30 @@ class AppViewModel(
 
     fun resolveTheme(themeName: String): AppThemePalette {
         return themeRepository.resolveTheme(themeName)
+    }
+
+    /**
+     * Reload settings from restored DB and reschedule alarms. Called after a
+     * successful restore so the app can continue without a manual restart.
+     */
+    fun reloadAfterRestore(onDone: () -> Unit) {
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            withContext(Dispatchers.IO) {
+                ReminderScheduler.cancelAll(context, repository)
+                ReminderSoundService.stop(context)
+            }
+            val settings = repository.loadSettings()
+            _uiState.update { it.copy(settings = settings, isLoading = false) }
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    ReminderMaintenance.runAll(context, repository)
+                } catch (e: Exception) {
+                    android.util.Log.e("MemLists", "Post-restore maintenance failed: ${e.message}", e)
+                }
+            }
+            onDone()
+        }
     }
 
     fun previewWelcomeLanguage(languageCode: String) {
