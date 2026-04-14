@@ -91,6 +91,9 @@ fun MemosHomeScreen(
     onOpenFolder: (MemoFolderType) -> Unit,
     onBackFromFolder: () -> Unit,
     onCloseRoot: () -> Unit,
+    onOpenTagCloud: () -> Unit = {},
+    onClearAllFilters: () -> Unit = {},
+    selectedTags: Set<String> = emptySet(),
     onToggleActive: (MemoItemSummary) -> Unit = {},
     onEditMemo: (MemoItemSummary) -> Unit = {},
     onDeleteMemo: (MemoItemSummary) -> Unit = {}
@@ -149,10 +152,22 @@ fun MemosHomeScreen(
             onDismiss = onDismissTodayReminders
         )
     }
-    val visibleItems = if (selectedFolder == null) {
+    val folderItems = if (selectedFolder == null) {
         items.filter { it.reminderType == 1 && !it.monthly && !it.yearly }
     } else {
         items
+    }
+    val visibleItems = if (selectedTags.isEmpty()) {
+        folderItems
+    } else {
+        folderItems.filter { item ->
+            val itemTags = item.tags
+                ?.split(",")
+                ?.map { it.trim().lowercase() }
+                ?.filter { it.isNotBlank() }
+                ?: emptyList()
+            selectedTags.all { tag -> itemTags.contains(tag) }
+        }
     }
     var menuExpanded by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
@@ -210,9 +225,9 @@ fun MemosHomeScreen(
                     contentDescription = lw("Check Reminders")
                 )
             }
-            TextButton(onClick = { }) {
+            TextButton(onClick = onOpenTagCloud) {
                 Text(
-                    text = lw("(All)"),
+                    text = if (selectedTags.isEmpty()) lw("(All)") else lw("(T)"),
                     color = palette.clText,
                     fontSize = UiTokens.fsNormal
                 )
@@ -229,8 +244,11 @@ fun MemosHomeScreen(
             ) {
                 DropdownMenuItem(
                     text = { Text(lw("Clear All Filters"), fontSize = UiTokens.fsNormal, color = palette.clText) },
-                    onClick = { menuExpanded = false },
-                    enabled = false
+                    onClick = {
+                        menuExpanded = false
+                        onClearAllFilters()
+                    },
+                    enabled = selectedTags.isNotEmpty()
                 )
                 DropdownMenuItem(
                     text = { Text(lw("Filters"), fontSize = UiTokens.fsNormal, color = palette.clText) },
@@ -239,8 +257,10 @@ fun MemosHomeScreen(
                 )
                 DropdownMenuItem(
                     text = { Text(lw("Tag Filter"), fontSize = UiTokens.fsNormal, color = palette.clText) },
-                    onClick = { menuExpanded = false },
-                    enabled = false
+                    onClick = {
+                        menuExpanded = false
+                        onOpenTagCloud()
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text(lw("Settings"), fontSize = UiTokens.fsNormal, color = palette.clText) },

@@ -73,10 +73,11 @@ class MemListsRepository(
     suspend fun loadMemosHome(
         folder: MemoFolderType?,
         newestFirst: Boolean,
-        hiddenMode: Boolean = false
+        hiddenMode: Boolean = false,
+        selectedTags: Set<String> = emptySet()
     ): MemosHomeData = withContext(Dispatchers.IO) {
         val items = loadMemoItems(folder = folder, hiddenMode = hiddenMode, newestFirst = newestFirst)
-        val folders = if (folder == null) loadMemoFolders(hiddenMode = hiddenMode) else emptyList()
+        val folders = if (folder == null) loadMemoFolders(hiddenMode = hiddenMode, selectedTags = selectedTags) else emptyList()
         MemosHomeData(items = items, folders = folders)
     }
 
@@ -391,6 +392,31 @@ class MemListsRepository(
         tags.toList().sortedBy { it.lowercase() }
     }
 
+    suspend fun loadTagCloud(hiddenMode: Boolean = false): Map<String, Int> = withContext(Dispatchers.IO) {
+        val counts = mutableMapOf<String, Int>()
+        databaseHelper.readableDatabase.query(
+            "items",
+            arrayOf("tags"),
+            "tags IS NOT NULL AND tags != '' AND hidden = ?",
+            arrayOf(if (hiddenMode) "1" else "0"),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                cursor.getStringOrNull(0)
+                    ?.split(",")
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotBlank() }
+                    ?.forEach { tag ->
+                        val key = tag.lowercase()
+                        counts[key] = (counts[key] ?: 0) + 1
+                    }
+            }
+        }
+        counts.toSortedMap()
+    }
+
     suspend fun insertList(
         name: String,
         comment: String?,
@@ -585,7 +611,10 @@ class MemListsRepository(
         return withCounts.sortedWith(memoComparator(folder = folder, newestFirst = newestFirst))
     }
 
-    private fun loadMemoFolders(hiddenMode: Boolean): List<MemoFolderSummary> {
+    private fun loadMemoFolders(
+        hiddenMode: Boolean,
+        selectedTags: Set<String> = emptySet()
+    ): List<MemoFolderSummary> {
         val hiddenValue = if (hiddenMode) 1 else 0
         val specs = listOf(
             MemoFolderType.Notes to "reminder_type = 0",
@@ -596,11 +625,30 @@ class MemListsRepository(
         )
 
         return specs.mapNotNull { (type, expression) ->
-            val count = databaseHelper.readableDatabase.compileStatement(
-                "SELECT COUNT(*) FROM items WHERE hidden = ? AND $expression"
-            ).apply {
-                bindLong(1, hiddenValue.toLong())
-            }.simpleQueryForLong().toInt()
+            val count = if (selectedTags.isEmpty()) {
+                databaseHelper.readableDatabase.compileStatement(
+                    "SELECT COUNT(*) FROM items WHERE hidden = ? AND $expression"
+                ).apply {
+                    bindLong(1, hiddenValue.toLong())
+                }.simpleQueryForLong().toInt()
+            } else {
+                var matched = 0
+                databaseHelper.readableDatabase.rawQuery(
+                    "SELECT tags FROM items WHERE hidden = ? AND $expression",
+                    arrayOf(hiddenValue.toString())
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val itemTags = cursor.getString(0)
+                            ?.split(",")
+                            ?.map { it.trim().lowercase() }
+                            ?.filter { it.isNotBlank() }
+                            ?.toSet()
+                            ?: emptySet()
+                        if (selectedTags.all { it in itemTags }) matched++
+                    }
+                }
+                matched
+            }
 
             if (count > 0) MemoFolderSummary(type = type, count = count) else null
         }

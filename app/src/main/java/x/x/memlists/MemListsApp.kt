@@ -31,6 +31,7 @@ import x.x.memlists.feature.lists.ListEntryEditorScreen
 import x.x.memlists.feature.memos.MemosHomeScreen
 import x.x.memlists.feature.memos.MemoEditorScreen
 import x.x.memlists.feature.memos.MemosViewModel
+import x.x.memlists.feature.memos.TagCloudScreen
 import x.x.memlists.feature.settings.SettingsScreen
 import x.x.memlists.feature.welcome.WelcomeScreen
 
@@ -44,6 +45,7 @@ private object Routes {
     const val ListNew = "list_new/{parentId}/{isFolder}"
     const val ListDetail = "list_detail/{listId}"
     const val EntryNew = "entry_new/{listId}"
+    const val TagCloud = "tag_cloud"
 }
 
 private fun listNewRoute(parentId: Long?, isFolder: Boolean): String {
@@ -139,7 +141,7 @@ fun MemListsApp() {
                     ?: remember { mutableStateOf(false) }
 
                 LaunchedEffect(uiState.settings.newestFirst) {
-                    memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                    memosViewModel.refreshIfNeeded(newestFirst = uiState.settings.newestFirst)
                 }
 
                 LaunchedEffect(shouldRefresh) {
@@ -156,9 +158,14 @@ fun MemListsApp() {
                     folders = memosUiState.folders,
                     todayReminderItems = todayReminderItems.value,
                     showTodayRemindersDialog = showTodayRemindersDialog.value,
+                    selectedTags = memosUiState.selectedTags,
                     lw = lw,
                     onOpenLists = { navController.navigate(Routes.Lists) },
                     onOpenSettings = { navController.navigate(Routes.Settings) },
+                    onOpenTagCloud = {
+                        navController.navigate(Routes.TagCloud)
+                    },
+                    onClearAllFilters = { memosViewModel.clearTagFilter() },
                     onCheckReminders = {
                         memosScope.launch {
                             val items = withContext(Dispatchers.IO) {
@@ -211,6 +218,32 @@ fun MemListsApp() {
                             memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
                         }
                     }
+                )
+            }
+            composable(Routes.TagCloud) {
+                val tagCloudApp = LocalContext.current.applicationContext as MemListsApplication
+                val tagCounts = remember { mutableStateOf(emptyMap<String, Int>()) }
+                val parentEntry = remember(navController) {
+                    navController.getBackStackEntry(Routes.Memos)
+                }
+                val parentViewModel: MemosViewModel = viewModel(parentEntry)
+                val parentState by parentViewModel.uiState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    tagCounts.value = withContext(Dispatchers.IO) {
+                        tagCloudApp.repository.loadTagCloud()
+                    }
+                }
+
+                TagCloudScreen(
+                    tagCounts = tagCounts.value,
+                    initialSelected = parentState.selectedTags,
+                    lw = lw,
+                    onApply = { tags ->
+                        parentViewModel.setTagFilter(tags)
+                        navController.popBackStack()
+                    },
+                    onCancel = { navController.popBackStack() }
                 )
             }
             composable(Routes.MemoNew) {

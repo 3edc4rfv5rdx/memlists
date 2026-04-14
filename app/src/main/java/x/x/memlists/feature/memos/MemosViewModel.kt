@@ -18,8 +18,17 @@ class MemosViewModel(
     private val _uiState = MutableStateFlow(MemosUiState())
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
+    private var lastNewestFirst: Boolean? = null
+
     fun refresh(newestFirst: Boolean) {
+        lastNewestFirst = newestFirst
         load(selectedFolder = _uiState.value.selectedFolder, newestFirst = newestFirst)
+    }
+
+    fun refreshIfNeeded(newestFirst: Boolean) {
+        if (lastNewestFirst != newestFirst) {
+            refresh(newestFirst)
+        }
     }
 
     fun openFolder(folder: MemoFolderType, newestFirst: Boolean) {
@@ -30,12 +39,37 @@ class MemosViewModel(
         load(selectedFolder = null, newestFirst = newestFirst)
     }
 
+    fun setTagFilter(tags: Set<String>) {
+        _uiState.update { it.copy(selectedTags = tags) }
+        reloadFolders()
+    }
+
+    fun clearTagFilter() {
+        _uiState.update { it.copy(selectedTags = emptySet()) }
+        reloadFolders()
+    }
+
+    private fun reloadFolders() {
+        val folder = _uiState.value.selectedFolder
+        if (folder != null) return
+        val newestFirst = lastNewestFirst ?: return
+        viewModelScope.launch {
+            val home = repository.loadMemosHome(
+                folder = null,
+                newestFirst = newestFirst,
+                selectedTags = _uiState.value.selectedTags
+            )
+            _uiState.update { it.copy(folders = home.folders) }
+        }
+    }
+
     private fun load(selectedFolder: MemoFolderType?, newestFirst: Boolean) {
         _uiState.update { it.copy(isLoading = true, selectedFolder = selectedFolder) }
         viewModelScope.launch {
             val home = repository.loadMemosHome(
                 folder = selectedFolder,
-                newestFirst = newestFirst
+                newestFirst = newestFirst,
+                selectedTags = _uiState.value.selectedTags
             )
             _uiState.update {
                 it.copy(
