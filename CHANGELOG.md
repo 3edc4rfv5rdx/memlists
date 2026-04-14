@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Backup dialogs: themed filled buttons and explicit font sizes per spec §1.2
 - N Backup & Restore: Documents/Memlists/bak-{date}/x{time}, WAL checkpoint, restore cancels+reschedules alarms and reloads settings without app restart
 - F MemoEditor priority: star icons to match User Filter screen
 - N User Filter screen: date range, tags, priority, reminder; saves on folder entry; (F)/(FT) indicators

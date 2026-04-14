@@ -562,7 +562,7 @@ Storage: `{appDir}/photo/entry/{entry_id}/`.
 
 ## 4. BACKUP, RESTORE & EXPORT
 
-### 4.1 Backup & Restore
+### 4.1 Backup & Restore ✅
 
 **Backup directory:** `Documents/Memlists/bak-{YYYYMMDD}/x{HHMMSS}/`
 

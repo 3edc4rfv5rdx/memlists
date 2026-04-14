@@ -17,6 +17,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -30,7 +32,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -321,10 +322,23 @@ fun SettingsScreen(
                 containerColor = palette.clFill,
                 titleContentColor = palette.clText,
                 textContentColor = palette.clText,
-                title = { Text(info.label) },
-                text = { Text(lw("Will replace all current data. Continue?")) },
+                title = {
+                    Text(
+                        text = info.label,
+                        fontSize = UiTokens.fsMedium,
+                        fontWeight = UiTokens.fwBold,
+                        color = palette.clText
+                    )
+                },
+                text = {
+                    Text(
+                        text = lw("Will replace all current data. Continue?"),
+                        fontSize = UiTokens.fsNormal,
+                        color = palette.clText
+                    )
+                },
                 confirmButton = {
-                    TextButton(onClick = {
+                    DialogButton(lw("Apply"), palette) {
                         val target = info
                         pendingRestore = null
                         scope.launch {
@@ -347,12 +361,10 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                    }) { Text(lw("Apply"), color = palette.clText) }
+                    }
                 },
                 dismissButton = {
-                    TextButton(onClick = { pendingRestore = null }) {
-                        Text(lw("Cancel"), color = palette.clText)
-                    }
+                    DialogButton(lw("Cancel"), palette) { pendingRestore = null }
                 }
             )
         }
@@ -401,7 +413,14 @@ private fun BackupListDialog(
         containerColor = palette.clFill,
         titleContentColor = palette.clText,
         textContentColor = palette.clText,
-        title = { Text(title) },
+        title = {
+            Text(
+                text = title,
+                fontSize = UiTokens.fsMedium,
+                fontWeight = UiTokens.fwBold,
+                color = palette.clText
+            )
+        },
         text = {
             Column {
                 backups.forEach { info ->
@@ -419,11 +438,31 @@ private fun BackupListDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(cancelText, color = palette.clText)
-            }
+            DialogButton(cancelText, palette, onDismiss)
         }
     )
+}
+
+@Composable
+private fun DialogButton(
+    text: String,
+    palette: AppThemePalette,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        shape = UiTokens.shapeMedium,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = palette.clUpBar,
+            contentColor = palette.clText
+        )
+    ) {
+        Text(
+            text = text,
+            fontSize = UiTokens.fsNormal,
+            fontWeight = UiTokens.fwBold
+        )
+    }
 }
 
 @Composable
