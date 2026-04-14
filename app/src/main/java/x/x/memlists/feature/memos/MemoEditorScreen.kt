@@ -76,6 +76,8 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.ui.graphics.toArgb
 import x.x.memlists.core.ui.formatPickerTime
 import x.x.memlists.core.ui.parseTimeOrDefault
@@ -1052,68 +1054,46 @@ private fun PriorityEditor(
 ) {
     val palette = LocalAppThemePalette.current
     Row(
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = lw("Priority"),
             color = palette.clText,
             fontSize = UiTokens.fsNormal,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
         )
-            FilledIconButton(
-                onClick = onDecrease,
-                enabled = priority > 0,
-                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
-                    containerColor = if (priority > 0) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        palette.clMenu
-                    },
-                    contentColor = if (priority > 0) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        palette.clText
-                    },
-                    disabledContainerColor = palette.clMenu.copy(alpha = 0.4f),
-                    disabledContentColor = palette.clText.copy(alpha = 0.4f)
-                )
-            ) {
+        IconButton(
+            onClick = onDecrease,
+            enabled = priority > 0
+        ) {
+            Icon(
+                imageVector = Icons.Default.Remove,
+                contentDescription = lw("Decrease"),
+                tint = palette.clText
+            )
+        }
+        Row {
+            repeat(3) { index ->
                 Icon(
-                    imageVector = Icons.Default.Remove,
-                    contentDescription = lw("Decrease")
+                    imageVector = if (index < priority) Icons.Default.Star else Icons.Default.StarBorder,
+                    contentDescription = null,
+                    tint = palette.clText
                 )
             }
-            Card(
-                colors = CardDefaults.cardColors(containerColor = palette.clBgrnd),
-                border = BorderStroke(1.dp, palette.clText.copy(alpha = 0.4f))
-            ) {
-                Text(
-                    text = priority.toString(),
-                    modifier = Modifier
-                        .width(36.dp)
-                        .padding(vertical = 6.dp),
-                    color = palette.clText,
-                    fontSize = UiTokens.fsNormal,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            }
-            FilledIconButton(
-                onClick = onIncrease,
-                enabled = priority < 3,
-                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
-                    containerColor = palette.clUpBar,
-                    contentColor = palette.clText,
-                    disabledContainerColor = palette.clUpBar.copy(alpha = 0.4f),
-                    disabledContentColor = palette.clText.copy(alpha = 0.4f)
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = lw("Increase")
-                )
-            }
+        }
+        IconButton(
+            onClick = onIncrease,
+            enabled = priority < 3
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = lw("Increase"),
+                tint = palette.clText
+            )
+        }
     }
 }
 
