@@ -85,6 +85,8 @@ import x.x.memlists.R
 import x.x.memlists.core.sound.SoundHelper
 import x.x.memlists.core.sound.SoundItem
 import x.x.memlists.core.ui.SoundPickerRow
+import x.x.memlists.core.ui.TagDictionaryDialog
+import x.x.memlists.core.ui.appendTag
 import x.x.memlists.core.ui.loadCustomSounds
 import x.x.memlists.core.reminder.ReminderScheduler
 import x.x.memlists.core.reminder.ReminderPermissions
@@ -1447,22 +1449,6 @@ private fun String.toDbTimeInt(): Int? {
     return if (digits.length == 4) digits.toIntOrNull() else null
 }
 
-private fun appendTag(currentTags: String, tag: String): String {
-    val cleanTag = tag.trim()
-    if (cleanTag.isBlank()) {
-        return currentTags
-    }
-    val current = currentTags
-        .split(",")
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
-        .toMutableList()
-    if (current.none { it.equals(cleanTag, ignoreCase = true) }) {
-        current += cleanTag
-    }
-    return current.joinToString(", ")
-}
-
 private fun formatDateForInput(value: Int?): String {
     if (value == null || value <= 0) return ""
     val s = value.toString().padStart(8, '0')
@@ -1550,52 +1536,3 @@ private enum class ReminderType(
     Period(3, "Period")
 }
 
-@Composable
-private fun TagDictionaryDialog(
-    tags: List<String>,
-    lw: (String) -> String,
-    onDismiss: () -> Unit,
-    onSelectTag: (String) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(lw("Tag dictionary"))
-        },
-        text = {
-            if (tags.isEmpty()) {
-                Text(lw("No tags yet"))
-            } else {
-                LazyColumn {
-                    items(tags) { tag ->
-                        Button(
-                            onClick = { onSelectTag(tag) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            shape = UiTokens.shapeMedium,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = LocalAppThemePalette.current.clMenu,
-                                contentColor = LocalAppThemePalette.current.clText
-                            )
-                        ) {
-                            Text(tag)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                shape = UiTokens.shapeMedium,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = LocalAppThemePalette.current.clUpBar,
-                    contentColor = LocalAppThemePalette.current.clText
-                )
-            ) {
-                Text(lw("Close"))
-            }
-        }
-    )
-}

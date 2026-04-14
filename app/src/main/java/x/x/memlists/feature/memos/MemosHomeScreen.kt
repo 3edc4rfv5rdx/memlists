@@ -41,7 +41,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.ui.unit.DpOffset
@@ -92,8 +91,10 @@ fun MemosHomeScreen(
     onBackFromFolder: () -> Unit,
     onCloseRoot: () -> Unit,
     onOpenTagCloud: () -> Unit = {},
+    onOpenUserFilters: () -> Unit = {},
     onClearAllFilters: () -> Unit = {},
     selectedTags: Set<String> = emptySet(),
+    userFilterActive: Boolean = false,
     onToggleActive: (MemoItemSummary) -> Unit = {},
     onEditMemo: (MemoItemSummary) -> Unit = {},
     onDeleteMemo: (MemoItemSummary) -> Unit = {}
@@ -152,23 +153,7 @@ fun MemosHomeScreen(
             onDismiss = onDismissTodayReminders
         )
     }
-    val folderItems = if (selectedFolder == null) {
-        items.filter { it.reminderType == 1 && !it.monthly && !it.yearly }
-    } else {
-        items
-    }
-    val visibleItems = if (selectedTags.isEmpty()) {
-        folderItems
-    } else {
-        folderItems.filter { item ->
-            val itemTags = item.tags
-                ?.split(",")
-                ?.map { it.trim().lowercase() }
-                ?.filter { it.isNotBlank() }
-                ?: emptyList()
-            selectedTags.all { tag -> itemTags.contains(tag) }
-        }
-    }
+    val visibleItems = items
     var menuExpanded by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
 
@@ -225,13 +210,19 @@ fun MemosHomeScreen(
                     contentDescription = lw("Check Reminders")
                 )
             }
-            TextButton(onClick = onOpenTagCloud) {
-                Text(
-                    text = if (selectedTags.isEmpty()) lw("(All)") else lw("(T)"),
-                    color = palette.clText,
-                    fontSize = UiTokens.fsNormal
-                )
+            val tagActive = selectedTags.isNotEmpty()
+            val indicator = when {
+                tagActive && userFilterActive -> "(FT)"
+                tagActive -> "(T)"
+                userFilterActive -> "(F)"
+                else -> "(All)"
             }
+            Text(
+                text = lw(indicator),
+                color = palette.clText,
+                fontSize = UiTokens.fsNormal,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
             IconButton(onClick = { menuExpanded = true }) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
@@ -247,13 +238,14 @@ fun MemosHomeScreen(
                     onClick = {
                         menuExpanded = false
                         onClearAllFilters()
-                    },
-                    enabled = selectedTags.isNotEmpty()
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text(lw("Filters"), fontSize = UiTokens.fsNormal, color = palette.clText) },
-                    onClick = { menuExpanded = false },
-                    enabled = false
+                    onClick = {
+                        menuExpanded = false
+                        onOpenUserFilters()
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text(lw("Tag Filter"), fontSize = UiTokens.fsNormal, color = palette.clText) },

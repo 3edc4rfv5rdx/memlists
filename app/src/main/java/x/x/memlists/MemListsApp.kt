@@ -32,6 +32,7 @@ import x.x.memlists.feature.memos.MemosHomeScreen
 import x.x.memlists.feature.memos.MemoEditorScreen
 import x.x.memlists.feature.memos.MemosViewModel
 import x.x.memlists.feature.memos.TagCloudScreen
+import x.x.memlists.feature.memos.UserFiltersScreen
 import x.x.memlists.feature.settings.SettingsScreen
 import x.x.memlists.feature.welcome.WelcomeScreen
 
@@ -46,6 +47,7 @@ private object Routes {
     const val ListDetail = "list_detail/{listId}"
     const val EntryNew = "entry_new/{listId}"
     const val TagCloud = "tag_cloud"
+    const val UserFilters = "user_filters"
 }
 
 private fun listNewRoute(parentId: Long?, isFolder: Boolean): String {
@@ -165,7 +167,11 @@ fun MemListsApp() {
                     onOpenTagCloud = {
                         navController.navigate(Routes.TagCloud)
                     },
-                    onClearAllFilters = { memosViewModel.clearTagFilter() },
+                    onOpenUserFilters = {
+                        navController.navigate(Routes.UserFilters)
+                    },
+                    userFilterActive = memosUiState.userFilter.isActive,
+                    onClearAllFilters = { memosViewModel.clearAllFilters() },
                     onCheckReminders = {
                         memosScope.launch {
                             val items = withContext(Dispatchers.IO) {
@@ -241,6 +247,23 @@ fun MemListsApp() {
                     lw = lw,
                     onApply = { tags ->
                         parentViewModel.setTagFilter(tags)
+                        navController.popBackStack()
+                    },
+                    onCancel = { navController.popBackStack() }
+                )
+            }
+            composable(Routes.UserFilters) {
+                val parentEntry = remember(navController) {
+                    navController.getBackStackEntry(Routes.Memos)
+                }
+                val parentViewModel: MemosViewModel = viewModel(parentEntry)
+                val parentState by parentViewModel.uiState.collectAsState()
+
+                UserFiltersScreen(
+                    initial = parentState.userFilter,
+                    lw = lw,
+                    onApply = { filter ->
+                        parentViewModel.setUserFilter(filter)
                         navController.popBackStack()
                     },
                     onCancel = { navController.popBackStack() }

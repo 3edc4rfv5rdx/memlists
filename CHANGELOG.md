@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N User Filter screen: date range, tags, priority, reminder; saves on folder entry; (F)/(FT) indicators
 - I Drop stale CHANGELOG.md.example and TODO-TESTING.md; add review notes and tag filter plan
 - N Tag Cloud filter: multi-select chips sized by frequency, AND semantic, folder counts reflect active filter
 - E Fix Back navigation loop from MemoEditor via confirmValueChange + launchSingleTop

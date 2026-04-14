@@ -74,10 +74,23 @@ class MemListsRepository(
         folder: MemoFolderType?,
         newestFirst: Boolean,
         hiddenMode: Boolean = false,
-        selectedTags: Set<String> = emptySet()
+        selectedTags: Set<String> = emptySet(),
+        userFilter: x.x.memlists.feature.memos.UserFilter = x.x.memlists.feature.memos.UserFilter()
     ): MemosHomeData = withContext(Dispatchers.IO) {
-        val items = loadMemoItems(folder = folder, hiddenMode = hiddenMode, newestFirst = newestFirst)
-        val folders = if (folder == null) loadMemoFolders(hiddenMode = hiddenMode, selectedTags = selectedTags) else emptyList()
+        val items = loadMemoItems(
+            folder = folder,
+            hiddenMode = hiddenMode,
+            newestFirst = newestFirst,
+            selectedTags = selectedTags,
+            userFilter = userFilter
+        )
+        val folders = if (folder == null) {
+            loadMemoFolders(
+                hiddenMode = hiddenMode,
+                selectedTags = selectedTags,
+                userFilter = userFilter
+            )
+        } else emptyList()
         MemosHomeData(items = items, folders = folders)
     }
 
@@ -555,24 +568,12 @@ class MemListsRepository(
     private fun loadMemoItems(
         folder: MemoFolderType?,
         hiddenMode: Boolean,
-        newestFirst: Boolean
+        newestFirst: Boolean,
+        selectedTags: Set<String> = emptySet(),
+        userFilter: x.x.memlists.feature.memos.UserFilter = x.x.memlists.feature.memos.UserFilter()
     ): List<MemoItemSummary> {
-        val selectionParts = mutableListOf<String>()
-        val selectionArgs = mutableListOf<String>()
-
-        selectionParts += "hidden = ?"
-        selectionArgs += if (hiddenMode) "1" else "0"
-
-        when (folder) {
-            MemoFolderType.Notes -> selectionParts += "reminder_type = 0"
-            MemoFolderType.Daily -> selectionParts += "reminder_type = 2"
-            MemoFolderType.Periods -> selectionParts += "reminder_type = 3"
-            MemoFolderType.Monthly -> selectionParts += "reminder_type = 1 AND monthly = 1"
-            MemoFolderType.Yearly -> selectionParts += "reminder_type = 1 AND yearly = 1"
-            null -> selectionParts += "reminder_type = 1 AND monthly = 0 AND yearly = 0"
-        }
-
-        val selection = selectionParts.joinToString(" AND ")
+        val (selection, selectionArgs) = buildMemoSelection(folder, hiddenMode, userFilter)
+        val requiredTags = mergedFilterTags(selectedTags, userFilter)
         val rows = mutableListOf<MemoItemSummary>()
         databaseHelper.readableDatabase.query(
             "items",
@@ -595,13 +596,16 @@ class MemListsRepository(
                 "monthly"
             ),
             selection,
-            selectionArgs.toTypedArray(),
+            selectionArgs,
             null,
             null,
             null
         ).use { cursor ->
             while (cursor.moveToNext()) {
-                rows += cursor.toMemoItemSummary(photoCount = 0)
+                val row = cursor.toMemoItemSummary(photoCount = 0)
+                if (requiredTags.isEmpty() || itemMatchesTags(row.tags, requiredTags)) {
+                    rows += row
+                }
             }
         }
 
@@ -611,40 +615,96 @@ class MemListsRepository(
         return withCounts.sortedWith(memoComparator(folder = folder, newestFirst = newestFirst))
     }
 
+    private fun buildMemoSelection(
+        folder: MemoFolderType?,
+        hiddenMode: Boolean,
+        userFilter: x.x.memlists.feature.memos.UserFilter
+    ): Pair<String, Array<String>> {
+        val parts = mutableListOf<String>()
+        val args = mutableListOf<String>()
+
+        parts += "hidden = ?"
+        args += if (hiddenMode) "1" else "0"
+
+        when (folder) {
+            MemoFolderType.Notes -> parts += "reminder_type = 0"
+            MemoFolderType.Daily -> parts += "reminder_type = 2"
+            MemoFolderType.Periods -> parts += "reminder_type = 3"
+            MemoFolderType.Monthly -> parts += "reminder_type = 1 AND monthly = 1"
+            MemoFolderType.Yearly -> parts += "reminder_type = 1 AND yearly = 1"
+            null -> parts += "reminder_type = 1 AND monthly = 0 AND yearly = 0"
+        }
+
+        userFilter.dateFrom?.let {
+            parts += "date IS NOT NULL AND date >= ?"
+            args += it.toString()
+        }
+        userFilter.dateTo?.let {
+            parts += "date IS NOT NULL AND date <= ?"
+            args += it.toString()
+        }
+        if (userFilter.priorityMin > 0) {
+            parts += "priority >= ?"
+            args += userFilter.priorityMin.toString()
+        }
+        when (userFilter.hasReminder) {
+            x.x.memlists.feature.memos.HasReminder.Yes -> parts += "reminder_type != 0"
+            x.x.memlists.feature.memos.HasReminder.No -> parts += "reminder_type = 0"
+            x.x.memlists.feature.memos.HasReminder.Any -> {}
+        }
+
+        return parts.joinToString(" AND ") to args.toTypedArray()
+    }
+
+    private fun mergedFilterTags(
+        selectedTags: Set<String>,
+        userFilter: x.x.memlists.feature.memos.UserFilter
+    ): Set<String> {
+        val fromUser = userFilter.tags.map { it.trim().lowercase() }.filter { it.isNotBlank() }
+        return selectedTags + fromUser
+    }
+
+    private fun itemMatchesTags(tagsColumn: String?, required: Set<String>): Boolean {
+        val itemTags = tagsColumn
+            ?.split(",")
+            ?.map { it.trim().lowercase() }
+            ?.filter { it.isNotBlank() }
+            ?.toSet()
+            ?: emptySet()
+        return required.all { it in itemTags }
+    }
+
     private fun loadMemoFolders(
         hiddenMode: Boolean,
-        selectedTags: Set<String> = emptySet()
+        selectedTags: Set<String> = emptySet(),
+        userFilter: x.x.memlists.feature.memos.UserFilter = x.x.memlists.feature.memos.UserFilter()
     ): List<MemoFolderSummary> {
-        val hiddenValue = if (hiddenMode) 1 else 0
-        val specs = listOf(
-            MemoFolderType.Notes to "reminder_type = 0",
-            MemoFolderType.Daily to "reminder_type = 2",
-            MemoFolderType.Periods to "reminder_type = 3",
-            MemoFolderType.Monthly to "reminder_type = 1 AND monthly = 1",
-            MemoFolderType.Yearly to "reminder_type = 1 AND yearly = 1"
+        val requiredTags = mergedFilterTags(selectedTags, userFilter)
+        val types = listOf(
+            MemoFolderType.Notes,
+            MemoFolderType.Daily,
+            MemoFolderType.Periods,
+            MemoFolderType.Monthly,
+            MemoFolderType.Yearly
         )
 
-        return specs.mapNotNull { (type, expression) ->
-            val count = if (selectedTags.isEmpty()) {
-                databaseHelper.readableDatabase.compileStatement(
-                    "SELECT COUNT(*) FROM items WHERE hidden = ? AND $expression"
-                ).apply {
-                    bindLong(1, hiddenValue.toLong())
-                }.simpleQueryForLong().toInt()
+        return types.mapNotNull { type ->
+            val (selection, args) = buildMemoSelection(type, hiddenMode, userFilter)
+            val count = if (requiredTags.isEmpty()) {
+                databaseHelper.readableDatabase.rawQuery(
+                    "SELECT COUNT(*) FROM items WHERE $selection",
+                    args
+                ).use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getInt(0) else 0
+                }
             } else {
                 var matched = 0
                 databaseHelper.readableDatabase.rawQuery(
-                    "SELECT tags FROM items WHERE hidden = ? AND $expression",
-                    arrayOf(hiddenValue.toString())
+                    "SELECT tags FROM items WHERE $selection",
+                    args
                 ).use { cursor ->
                     while (cursor.moveToNext()) {
-                        val itemTags = cursor.getString(0)
-                            ?.split(",")
-                            ?.map { it.trim().lowercase() }
-                            ?.filter { it.isNotBlank() }
-                            ?.toSet()
-                            ?: emptySet()
-                        if (selectedTags.all { it in itemTags }) matched++
+                        if (itemMatchesTags(cursor.getString(0), requiredTags)) matched++
                     }
                 }
                 matched
