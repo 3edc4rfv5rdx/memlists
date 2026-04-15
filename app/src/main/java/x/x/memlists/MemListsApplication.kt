@@ -7,17 +7,21 @@ import android.content.Context
 import x.x.memlists.core.data.MemListsDatabaseHelper
 import x.x.memlists.core.data.MemListsRepository
 import x.x.memlists.core.i18n.AppLocalizer
+import x.x.memlists.core.photo.PhotoRepository
+import x.x.memlists.core.photo.PhotoStorage
 import x.x.memlists.core.theme.ThemeRepository
 
 class MemListsApplication : Application() {
     val databaseHelper: MemListsDatabaseHelper by lazy { MemListsDatabaseHelper(this) }
     val repository: MemListsRepository by lazy { MemListsRepository(databaseHelper) }
+    val photoRepository: PhotoRepository by lazy { PhotoRepository(this, databaseHelper) }
     val localizer: AppLocalizer by lazy { AppLocalizer(this) }
     val themeRepository: ThemeRepository by lazy { ThemeRepository(this) }
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        PhotoStorage.cleanupTemp(this)
     }
 
     private fun createNotificationChannels() {

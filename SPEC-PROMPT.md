@@ -55,12 +55,12 @@ Default theme: Light. User selects theme on the welcome screen (first launch) or
 - Punctuation is NOT stored in the localization file — added in code.
 - Language selected in settings or on first-launch welcome screen.
 
-### 1.5 First Launch
+### ✅ 1.5 First Launch
 
 On first launch, a **Welcome Screen** appears:
 - App icon, title, subtitle.
-- User selects language (radio button list).
-- User selects color theme (radio button list).
+- User selects language (dropdown).
+- User selects color theme (dropdown).
 - "Start" button saves preferences and navigates to the main screen.
 
 ---
@@ -136,7 +136,7 @@ Key-value table (`settings`) in the single shared database:
 | auto_sort_dict | "true" | Auto-sort lists dictionary |
 | large_font_wakelock | "true" | Keep screen on in large font mode |
 
-### 2.3 Photos Table
+### ✅ 2.3 Photos Table
 
 Shared table for photos across both modules:
 
@@ -223,7 +223,7 @@ Organized in sections:
 - Content text area (multi-line, optional).
 - Tags field with comma separation.
 
-**2. Photo Gallery:**
+**✅ 2. Photo Gallery:**
 - Shows attached photos as thumbnails.
 - Photo button → menu: Camera / Gallery.
 - Tap photo → fullscreen viewer (swipe to navigate, counter overlay).

@@ -220,6 +220,10 @@ fun MemListsApp() {
                             withContext(Dispatchers.IO) {
                                 ReminderScheduler.cancelItem(memosApplication, item.id)
                                 memosApplication.repository.deleteMemo(item.id)
+                                memosApplication.photoRepository.deleteAllForOwner(
+                                    x.x.memlists.core.photo.PhotoOwnerType.Memo,
+                                    item.id
+                                )
                             }
                             memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
                         }

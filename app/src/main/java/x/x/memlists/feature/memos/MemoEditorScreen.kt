@@ -92,6 +92,10 @@ import x.x.memlists.core.ui.appendTag
 import x.x.memlists.core.ui.loadCustomSounds
 import x.x.memlists.core.reminder.ReminderScheduler
 import x.x.memlists.core.reminder.ReminderPermissions
+import x.x.memlists.core.photo.PhotoGallerySection
+import x.x.memlists.core.photo.PhotoOwnerType
+import x.x.memlists.core.photo.PhotoViewerOverlay
+import x.x.memlists.core.photo.rememberPhotoGalleryState
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.DisposableEffect
 import android.net.Uri
@@ -171,8 +175,19 @@ fun MemoEditorScreen(
     var tagDialogVisible by remember { mutableStateOf(false) }
     val knownTags = remember { mutableStateListOf<String>() }
 
+    val photoGalleryState = rememberPhotoGalleryState(
+        context = context,
+        repository = application.photoRepository,
+        ownerType = PhotoOwnerType.Memo,
+        initialOwnerId = memoId
+    )
+    var viewerIndex by remember { mutableStateOf<Int?>(null) }
+
     DisposableEffect(Unit) {
-        onDispose { soundHelper.release() }
+        onDispose {
+            soundHelper.release()
+            photoGalleryState.discardPending()
+        }
     }
 
     BackHandler(enabled = true) {
@@ -334,7 +349,7 @@ fun MemoEditorScreen(
                         ReminderScheduler.cancelItem(context, memoId)
                         memoId
                     } else {
-                        application.repository.insertMemo(
+                        val newId = application.repository.insertMemo(
                             title = trimmedTitle,
                             content = content.trim().ifBlank { null },
                             tags = tags.trim().ifBlank { null },
@@ -353,6 +368,8 @@ fun MemoEditorScreen(
                             monthly = resolvedMonthly,
                             remove = resolvedRemove
                         )
+                        photoGalleryState.commitPending(newId)
+                        newId
                     }
                     if (remindersEnabled && itemId > 0) {
                         ReminderScheduler.scheduleItem(context, application.repository, itemId)
@@ -463,6 +480,11 @@ fun MemoEditorScreen(
                             )
                         }
                     )
+                    PhotoGallerySection(
+                        state = photoGalleryState,
+                        lw = lw,
+                        onOpenViewer = { viewerIndex = it }
+                    )
                     if (!remindersEnabled || reminderType != ReminderType.Period) {
                         DateInputField(
                             value = dateText,
@@ -471,7 +493,7 @@ fun MemoEditorScreen(
                             pickerContext = pickerContext,
                             onValueChange = {
                                 dateText = normalizeDateInput(it)
-    
+
                             },
                             onClear = { dateText = "" }
                         )
@@ -547,6 +569,28 @@ fun MemoEditorScreen(
                     )
                 }
             }
+        }
+    }
+
+    viewerIndex?.let { startIndex ->
+        val entries = photoGalleryState.entries
+        if (entries.isEmpty()) {
+            viewerIndex = null
+        } else {
+            PhotoViewerOverlay(
+                entries = entries,
+                initialIndex = startIndex,
+                lw = lw,
+                onClose = { viewerIndex = null },
+                onDelete = { entry ->
+                    scope.launch {
+                        photoGalleryState.delete(entry)
+                        if (photoGalleryState.entries.isEmpty()) {
+                            viewerIndex = null
+                        }
+                    }
+                }
+            )
         }
     }
 }

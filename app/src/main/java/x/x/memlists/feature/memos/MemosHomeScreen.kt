@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -511,11 +513,22 @@ private fun MemoItemCard(
                 )
             }
             if (item.photoCount > 0) {
-                Text(
-                    text = item.photoCount.toString(),
-                    color = palette.clText.copy(alpha = 0.72f),
-                    fontSize = UiTokens.fsNormal
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        tint = palette.clText.copy(alpha = 0.72f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = item.photoCount.toString(),
+                        color = palette.clText.copy(alpha = 0.72f),
+                        fontSize = UiTokens.fsNormal
+                    )
+                }
             }
             }
         }
