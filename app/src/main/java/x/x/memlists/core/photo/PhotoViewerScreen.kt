@@ -172,8 +172,10 @@ private fun FullscreenPhoto(entry: PhotoEntry) {
                             val newScale = (scale * zoom).coerceIn(1f, 5f)
                             scale = newScale
                             if (newScale > 1f) {
-                                offsetX += pan.x
-                                offsetY += pan.y
+                                val maxX = (newScale - 1f) * size.width / 2f
+                                val maxY = (newScale - 1f) * size.height / 2f
+                                offsetX = (offsetX + pan.x).coerceIn(-maxX, maxX)
+                                offsetY = (offsetY + pan.y).coerceIn(-maxY, maxY)
                             } else {
                                 offsetX = 0f; offsetY = 0f
                             }

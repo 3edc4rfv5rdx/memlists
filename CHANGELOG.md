@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Photo viewer: clamp pan to container edges when zoomed
 - F Photo viewer: pinch-zoom 1x-5x, pan when zoomed, double-tap toggles 1x/2x
 - N Photo button at right edge of memo row opens viewer; release script bumps build_number.txt
 - N Photos for memos: shared core/photo module (storage, repo, gallery, viewer), 10-photo limit, camera/gallery via FileProvider
