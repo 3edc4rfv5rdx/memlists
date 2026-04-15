@@ -1,8 +1,11 @@
 package x.x.memlists.core.photo
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -81,6 +84,18 @@ fun PhotoGallerySection(
         }
     }
 
+    fun launchCameraWithFile() {
+        val file = state.newCaptureFile()
+        pendingCaptureFile = file
+        cameraLauncher.launch(PhotoStorage.contentUriFor(context, file))
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) launchCameraWithFile()
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -90,9 +105,14 @@ fun PhotoGallerySection(
     }
 
     fun launchCamera() {
-        val file = state.newCaptureFile()
-        pendingCaptureFile = file
-        cameraLauncher.launch(PhotoStorage.contentUriFor(context, file))
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            launchCameraWithFile()
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
     }
 
     fun requestAdd() {

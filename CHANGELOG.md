@@ -3,6 +3,8 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Photo viewer: pinch-zoom 1x-5x, pan when zoomed, double-tap toggles 1x/2x
+- N Photo button at right edge of memo row opens viewer; release script bumps build_number.txt
 - N Photos for memos: shared core/photo module (storage, repo, gallery, viewer), 10-photo limit, camera/gallery via FileProvider
 - N CSV export: dumps items/lists/dictionary/entries to Documents/Memlists/csv-{date}
 - F Backup dialogs: themed filled buttons and explicit font sizes per spec §1.2

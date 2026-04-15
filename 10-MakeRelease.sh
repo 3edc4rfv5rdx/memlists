@@ -10,8 +10,18 @@ if [[ ! -f "$BUILD_FILE" ]]; then
 fi
 
 source "$BUILD_FILE"
-echo "Version: $version  Build: $build"
-echo "Release build does not change build_number.txt"
+NEW_BUILD=$((build + 1))
+TODAY=$(date +%Y%m%d)
+NEW_VERSION="${base_version}.${TODAY}"
+
+cat > "$BUILD_FILE" <<EOF
+base_version=${base_version}
+build=${NEW_BUILD}
+version=${NEW_VERSION}
+EOF
+
+echo "Version: $NEW_VERSION"
+echo ">>> Build: $NEW_BUILD <<<"
 
 ./gradlew assembleRelease
 

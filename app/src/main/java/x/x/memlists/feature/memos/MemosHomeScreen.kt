@@ -47,11 +47,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
@@ -63,6 +66,10 @@ import androidx.compose.ui.window.DialogWindowProvider
 import x.x.memlists.core.data.MemoFolderSummary
 import x.x.memlists.core.data.MemoFolderType
 import x.x.memlists.core.data.MemoItemSummary
+import x.x.memlists.core.photo.PhotoEntry
+import x.x.memlists.core.photo.PhotoOwnerType
+import x.x.memlists.core.photo.PhotoRepository
+import x.x.memlists.core.photo.PhotoViewerOverlay
 import x.x.memlists.core.data.todayAsInt
 import x.x.memlists.core.data.firstDailyTime
 import x.x.memlists.core.data.formatDate
@@ -99,10 +106,26 @@ fun MemosHomeScreen(
     userFilterActive: Boolean = false,
     onToggleActive: (MemoItemSummary) -> Unit = {},
     onEditMemo: (MemoItemSummary) -> Unit = {},
-    onDeleteMemo: (MemoItemSummary) -> Unit = {}
+    onDeleteMemo: (MemoItemSummary) -> Unit = {},
+    photoRepository: PhotoRepository? = null,
+    onPhotosChanged: () -> Unit = {}
 ) {
     val palette = LocalAppThemePalette.current
+    val photoScope = rememberCoroutineScope()
     var pendingDelete by remember { mutableStateOf<MemoItemSummary?>(null) }
+    var viewerMemoId by remember { mutableStateOf<Long?>(null) }
+    var viewerEntries by remember { mutableStateOf<List<PhotoEntry>>(emptyList()) }
+    var viewerDirty by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewerMemoId) {
+        val id = viewerMemoId
+        if (id != null && photoRepository != null) {
+            val refs = photoRepository.list(PhotoOwnerType.Memo, id)
+            viewerEntries = refs.map { PhotoEntry(dbId = it.id, path = it.path) }
+        } else {
+            viewerEntries = emptyList()
+        }
+    }
     pendingDelete?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
@@ -326,7 +349,10 @@ fun MemosHomeScreen(
                         palette = palette,
                         onToggleActive = { onToggleActive(item) },
                         onEdit = { onEditMemo(item) },
-                        onRequestDelete = { pendingDelete = item }
+                        onRequestDelete = { pendingDelete = item },
+                        onViewPhotos = if (item.photoCount > 0) {
+                            { viewerMemoId = item.id }
+                        } else null
                     )
                 }
             }
@@ -342,6 +368,34 @@ fun MemosHomeScreen(
             }
         }
     }
+
+    if (viewerMemoId != null && viewerEntries.isNotEmpty() && photoRepository != null) {
+        PhotoViewerOverlay(
+            entries = viewerEntries,
+            initialIndex = 0,
+            lw = lw,
+            onClose = {
+                viewerMemoId = null
+                if (viewerDirty) {
+                    viewerDirty = false
+                    onPhotosChanged()
+                }
+            },
+            onDelete = { entry ->
+                val dbId = entry.dbId ?: return@PhotoViewerOverlay
+                photoScope.launch {
+                    photoRepository.delete(dbId)
+                    viewerEntries = viewerEntries.filter { it.dbId != dbId }
+                    viewerDirty = true
+                    if (viewerEntries.isEmpty()) {
+                        viewerMemoId = null
+                        viewerDirty = false
+                        onPhotosChanged()
+                    }
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -352,7 +406,8 @@ private fun SwipeableMemoRow(
     palette: AppThemePalette,
     onToggleActive: () -> Unit,
     onEdit: () -> Unit,
-    onRequestDelete: () -> Unit
+    onRequestDelete: () -> Unit,
+    onViewPhotos: (() -> Unit)? = null
 ) {
     @Suppress("DEPRECATION")
     val dismissState = rememberSwipeToDismissBoxState(
@@ -410,7 +465,8 @@ private fun SwipeableMemoRow(
                 item = item,
                 lw = lw,
                 palette = palette,
-                onToggleActive = onToggleActive
+                onToggleActive = onToggleActive,
+                onViewPhotos = onViewPhotos
             )
             DropdownMenu(
                 expanded = contextMenuExpanded,
@@ -441,7 +497,8 @@ private fun MemoItemCard(
     item: MemoItemSummary,
     lw: (String) -> String,
     palette: AppThemePalette,
-    onToggleActive: () -> Unit = {}
+    onToggleActive: () -> Unit = {},
+    onViewPhotos: (() -> Unit)? = null
 ) {
     val isToday = item.date == todayAsInt()
     Card(
@@ -512,24 +569,28 @@ private fun MemoItemCard(
                     fontSize = UiTokens.fsNormal
                 )
             }
-            if (item.photoCount > 0) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
-                        tint = palette.clText.copy(alpha = 0.72f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = item.photoCount.toString(),
-                        color = palette.clText.copy(alpha = 0.72f),
-                        fontSize = UiTokens.fsNormal
-                    )
-                }
             }
+            if (item.photoCount > 0 && onViewPhotos != null) {
+                IconButton(
+                    onClick = onViewPhotos,
+                    modifier = Modifier.padding(start = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = lw("Photos"),
+                            tint = palette.clText
+                        )
+                        Text(
+                            text = item.photoCount.toString(),
+                            color = palette.clText,
+                            fontSize = UiTokens.fsNormal
+                        )
+                    }
+                }
             }
         }
     }

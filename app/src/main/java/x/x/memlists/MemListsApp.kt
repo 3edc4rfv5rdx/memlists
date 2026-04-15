@@ -227,6 +227,10 @@ fun MemListsApp() {
                             }
                             memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
                         }
+                    },
+                    photoRepository = memosApplication.photoRepository,
+                    onPhotosChanged = {
+                        memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
                     }
                 )
             }

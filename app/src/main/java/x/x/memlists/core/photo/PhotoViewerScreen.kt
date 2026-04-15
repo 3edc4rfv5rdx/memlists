@@ -4,6 +4,14 @@ import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -85,7 +93,7 @@ fun PhotoViewerOverlay(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.ArrowBack, contentDescription = lw("Close"), tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = lw("Close"), tint = Color.White)
             }
             Spacer(Modifier.width(8.dp))
             Text(
@@ -129,8 +137,65 @@ private fun FullscreenPhoto(entry: PhotoEntry) {
     LaunchedEffect(entry.path) {
         bitmap = PhotoBitmapLoader.load(entry.path, targetPx = 1600)
     }
+    var scale by remember(entry.path) { mutableStateOf(1f) }
+    var offsetX by remember(entry.path) { mutableStateOf(0f) }
+    var offsetY by remember(entry.path) { mutableStateOf(0f) }
+
+    var lastTapTime by remember(entry.path) { mutableStateOf(0L) }
+
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(entry.path) {
+                val slop = viewConfiguration.touchSlop
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val downPos = down.position
+                    var movedBeyondSlop = false
+                    var wasMultiTouch = false
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        val pointers = event.changes.count { it.pressed }
+                        val multiTouch = pointers >= 2
+                        if (multiTouch) wasMultiTouch = true
+                        if (!movedBeyondSlop) {
+                            val current = event.changes.firstOrNull { it.pressed }?.position
+                            if (current != null) {
+                                val dx = current.x - downPos.x
+                                val dy = current.y - downPos.y
+                                if (kotlin.math.hypot(dx, dy) > slop) movedBeyondSlop = true
+                            }
+                        }
+                        if (multiTouch || scale > 1f) {
+                            val zoom = event.calculateZoom()
+                            val pan = event.calculatePan()
+                            val newScale = (scale * zoom).coerceIn(1f, 5f)
+                            scale = newScale
+                            if (newScale > 1f) {
+                                offsetX += pan.x
+                                offsetY += pan.y
+                            } else {
+                                offsetX = 0f; offsetY = 0f
+                            }
+                            event.changes.forEach { if (it.positionChanged()) it.consume() }
+                        }
+                    } while (event.changes.any { it.pressed })
+
+                    if (!movedBeyondSlop && !wasMultiTouch) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastTapTime < 300L) {
+                            if (scale > 1f) {
+                                scale = 1f; offsetX = 0f; offsetY = 0f
+                            } else {
+                                scale = 2f
+                            }
+                            lastTapTime = 0L
+                        } else {
+                            lastTapTime = now
+                        }
+                    }
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         val bmp = bitmap
@@ -138,7 +203,14 @@ private fun FullscreenPhoto(entry: PhotoEntry) {
             Image(
                 bitmap = bmp.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offsetX,
+                        translationY = offsetY
+                    ),
                 contentScale = ContentScale.Fit
             )
         } else {
