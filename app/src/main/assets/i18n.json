@@ -771,5 +771,17 @@
   "Storage permission required": {
     "ru": "Требуется доступ к хранилищу",
     "ua": "Потрібен доступ до сховища"
+  },
+  "Export to CSV": {
+    "ru": "Экспорт в CSV",
+    "ua": "Експорт у CSV"
+  },
+  "CSV export complete": {
+    "ru": "CSV экспорт завершён",
+    "ua": "CSV експорт завершено"
+  },
+  "CSV export failed": {
+    "ru": "Не удалось экспортировать CSV",
+    "ua": "Не вдалося експортувати CSV"
   }
 }

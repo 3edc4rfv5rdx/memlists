@@ -562,7 +562,7 @@ Storage: `{appDir}/photo/entry/{entry_id}/`.
 
 ## 4. BACKUP, RESTORE & EXPORT
 
-### 4.1 Backup & Restore ✅
+### ✅ 4.1 Backup & Restore
 
 **Backup directory:** `Documents/Memlists/bak-{YYYYMMDD}/x{HHMMSS}/`
 
@@ -590,7 +590,7 @@ Storage: `{appDir}/photo/entry/{entry_id}/`.
 
 Multiple backups retained (no auto-cleanup). User selects which to restore.
 
-### 4.2 CSV Export
+### ✅ 4.2 CSV Export
 
 Separate menu item in Settings — human-readable data export (not for restore).
 

@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import x.x.memlists.MemListsApplication
 import x.x.memlists.core.backup.BackupInfo
 import x.x.memlists.core.backup.BackupManager
+import x.x.memlists.core.backup.CsvExporter
 import x.x.memlists.core.backup.StoragePermission
 import x.x.memlists.core.data.SettingsData
 import x.x.memlists.core.reminder.ReminderScheduler
@@ -296,6 +297,31 @@ fun SettingsScreen(
                         } else {
                             backups = list
                             showRestoreDialog = true
+                        }
+                    }
+                }
+            )
+
+            ActionRowCard(
+                label = lw("Export to CSV"),
+                palette = palette,
+                onClick = {
+                    if (!StoragePermission.hasAllFilesAccess()) {
+                        permissionLauncher.launch(StoragePermission.requestAllFilesAccessIntent(context))
+                        return@ActionRowCard
+                    }
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) { CsvExporter.exportAll(context) }
+                        if (result.isSuccess) {
+                            snackbarHostState.showThemedSnackbar(
+                                message = lw("CSV export complete"),
+                                tone = SnackbarTone.Success
+                            )
+                        } else {
+                            snackbarHostState.showThemedSnackbar(
+                                message = lw("CSV export failed"),
+                                tone = SnackbarTone.Error
+                            )
                         }
                     }
                 }
