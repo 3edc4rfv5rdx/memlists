@@ -72,7 +72,8 @@ fun DropdownCard(
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                    onDismissRequest = { expanded = false },
+                    containerColor = palette.clMenu
                 ) {
                     options.forEach { option ->
                         DropdownMenuItem(

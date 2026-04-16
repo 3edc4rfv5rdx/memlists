@@ -95,7 +95,8 @@ fun SoundPickerRow(
                 onDismissRequest = {
                     expanded = false
                     onStop()
-                }
+                },
+                containerColor = palette.clMenu
             ) {
                 DropdownMenuItem(
                     text = {

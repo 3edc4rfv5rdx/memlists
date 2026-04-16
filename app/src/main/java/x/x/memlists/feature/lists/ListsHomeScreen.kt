@@ -239,7 +239,8 @@ private fun SwipeableContainerRow(
             DropdownMenu(
                 expanded = contextMenuExpanded,
                 onDismissRequest = { contextMenuExpanded = false },
-                offset = DpOffset(x = 120.dp, y = 0.dp)
+                offset = DpOffset(x = 120.dp, y = 0.dp),
+                containerColor = palette.clMenu
             ) {
                 DropdownMenuItem(
                     text = { Text(lw("Edit"), fontSize = UiTokens.fsNormal, color = palette.clText) },
