@@ -1,4 +1,4 @@
-## Memorizer
+## MemLists
 Android memory assistant
 
 ## Features
