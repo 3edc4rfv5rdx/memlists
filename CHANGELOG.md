@@ -3,15 +3,9 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Lists: green/red snackbar on save success/failure in editors
+
 ## v0.2.20260416+178
-- N Lists: edit list/folder and edit entry flows with save icon in app bar
-- N Lists: swipe right to edit, swipe left to delete, long-press context menu
-- N Lists: delete confirmation dialog via shared ConfirmDeleteDialog
-- F Lists: compact card padding, tighter vertical spacing, brighter divider
-- F Lists: autofocus name field, floating labels, remove redundant section titles
-- E Lists: fix double-navigate on swipe-to-edit via launchSingleTop
-- E Lists: edit mode save stays on screen instead of popping back
-- R Extract shared ConfirmDeleteDialog from three duplicate inline dialogs
 - F MemoEditor: show Saved snackbar on first save too, not only on edits
 - E Reminder sound: poll isPlaying + OnCompletion, don't trust reported duration
 - E Reminder sound service stops on real playback end, not on 10s*cycles estimate

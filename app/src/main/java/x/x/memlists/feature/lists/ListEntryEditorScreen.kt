@@ -11,6 +11,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +30,9 @@ import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
 import x.x.memlists.core.ui.ScrollableScreen
+import x.x.memlists.core.ui.SnackbarTone
 import x.x.memlists.core.ui.UiTokens
+import x.x.memlists.core.ui.showThemedSnackbar
 
 @Composable
 fun ListEntryEditorScreen(
@@ -43,11 +46,11 @@ fun ListEntryEditorScreen(
     val palette = LocalAppThemePalette.current
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
+    val snackbarHostState = remember { SnackbarHostState() }
     val isEdit = entryId != null
     var name by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
-    var validationMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(entryId) {
         if (isEdit) {
@@ -63,26 +66,31 @@ fun ListEntryEditorScreen(
     fun save() {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
-            validationMessage = lw("Name is required")
+            scope.launch { snackbarHostState.showThemedSnackbar(lw("Name is required"), SnackbarTone.Error) }
             return
         }
         scope.launch {
-            if (isEdit) {
-                application.repository.updateListEntry(
-                    entryId = entryId,
-                    name = trimmedName,
-                    quantity = quantity.trim().ifBlank { null },
-                    unit = unit.trim().ifBlank { null }
-                )
-            } else {
-                application.repository.insertListEntry(
-                    listId = listId,
-                    name = trimmedName,
-                    quantity = quantity.trim().ifBlank { null },
-                    unit = unit.trim().ifBlank { null }
-                )
+            try {
+                if (isEdit) {
+                    application.repository.updateListEntry(
+                        entryId = entryId,
+                        name = trimmedName,
+                        quantity = quantity.trim().ifBlank { null },
+                        unit = unit.trim().ifBlank { null }
+                    )
+                } else {
+                    application.repository.insertListEntry(
+                        listId = listId,
+                        name = trimmedName,
+                        quantity = quantity.trim().ifBlank { null },
+                        unit = unit.trim().ifBlank { null }
+                    )
+                }
+                onSaved()
+                snackbarHostState.showThemedSnackbar(lw("Saved"), SnackbarTone.Success)
+            } catch (e: Exception) {
+                snackbarHostState.showThemedSnackbar(lw("Save failed"), SnackbarTone.Error)
             }
-            onSaved()
         }
     }
 
@@ -90,6 +98,7 @@ fun ListEntryEditorScreen(
         title = lw(if (isEdit) "Edit item" else "New item"),
         navigationButtonMode = NavigationButtonMode.Back,
         onNavigateBack = onNavigateBack,
+        snackbarHostState = snackbarHostState,
         actions = {
             IconButton(onClick = { save() }) {
                 Icon(
@@ -113,10 +122,7 @@ fun ListEntryEditorScreen(
                 ) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = {
-                            name = it
-                            validationMessage = null
-                        },
+                        onValueChange = { name = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(focusRequester),
@@ -135,13 +141,6 @@ fun ListEntryEditorScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(lw("Unit")) }
                     )
-                    validationMessage?.let {
-                        Text(
-                            text = it,
-                            color = palette.clText,
-                            fontSize = UiTokens.fsNormal
-                        )
-                    }
                 }
             }
         }

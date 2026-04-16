@@ -11,6 +11,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +30,9 @@ import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
 import x.x.memlists.core.ui.ScrollableScreen
+import x.x.memlists.core.ui.SnackbarTone
 import x.x.memlists.core.ui.UiTokens
+import x.x.memlists.core.ui.showThemedSnackbar
 
 @Composable
 fun ListEditorScreen(
@@ -44,11 +47,11 @@ fun ListEditorScreen(
     val palette = LocalAppThemePalette.current
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
+    val snackbarHostState = remember { SnackbarHostState() }
     val isEdit = listId != null
     var name by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
     var resolvedIsFolder by remember { mutableStateOf(isFolder) }
-    var validationMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(listId) {
         if (isEdit) {
@@ -71,25 +74,30 @@ fun ListEditorScreen(
     fun save() {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
-            validationMessage = lw("Name is required")
+            scope.launch { snackbarHostState.showThemedSnackbar(lw("Name is required"), SnackbarTone.Error) }
             return
         }
         scope.launch {
-            if (isEdit) {
-                application.repository.updateList(
-                    listId = listId,
-                    name = trimmedName,
-                    comment = comment.trim().ifBlank { null }
-                )
-            } else {
-                application.repository.insertList(
-                    name = trimmedName,
-                    comment = comment.trim().ifBlank { null },
-                    isFolder = isFolder,
-                    parentId = if (isFolder) null else parentId
-                )
+            try {
+                if (isEdit) {
+                    application.repository.updateList(
+                        listId = listId,
+                        name = trimmedName,
+                        comment = comment.trim().ifBlank { null }
+                    )
+                } else {
+                    application.repository.insertList(
+                        name = trimmedName,
+                        comment = comment.trim().ifBlank { null },
+                        isFolder = isFolder,
+                        parentId = if (isFolder) null else parentId
+                    )
+                }
+                onSaved()
+                snackbarHostState.showThemedSnackbar(lw("Saved"), SnackbarTone.Success)
+            } catch (e: Exception) {
+                snackbarHostState.showThemedSnackbar(lw("Save failed"), SnackbarTone.Error)
             }
-            onSaved()
         }
     }
 
@@ -97,6 +105,7 @@ fun ListEditorScreen(
         title = title,
         navigationButtonMode = NavigationButtonMode.Back,
         onNavigateBack = onNavigateBack,
+        snackbarHostState = snackbarHostState,
         actions = {
             IconButton(onClick = { save() }) {
                 Icon(
@@ -120,10 +129,7 @@ fun ListEditorScreen(
                 ) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = {
-                            name = it
-                            validationMessage = null
-                        },
+                        onValueChange = { name = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(focusRequester),
@@ -136,13 +142,6 @@ fun ListEditorScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(lw("Comment")) }
                     )
-                    validationMessage?.let {
-                        Text(
-                            text = it,
-                            color = palette.clText,
-                            fontSize = UiTokens.fsNormal
-                        )
-                    }
                 }
             }
         }
