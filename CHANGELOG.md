@@ -3,6 +3,13 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F MemoEditor: show Saved snackbar on first save too, not only on edits
+- E Reminder sound: poll isPlaying + OnCompletion, don't trust reported duration
+- E Reminder sound service stops on real playback end, not on 10s*cycles estimate
+- E Home refreshes after maintenance via AppViewModel maintenanceTick
+- E Auto-delete of expired reminders now cleans photos + cancels alarms
+- E Snooze alarm cancelled with parent reminder on edit/disable/delete
+- F Delete-photo dialogs: themed filled buttons per spec §1.2
 - F Photo viewer: clamp pan to container edges when zoomed
 - F Photo viewer: pinch-zoom 1x-5x, pan when zoomed, double-tap toggles 1x/2x
 - N Photo button at right edge of memo row opens viewer; release script bumps build_number.txt

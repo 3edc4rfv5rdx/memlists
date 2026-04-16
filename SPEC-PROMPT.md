@@ -4,6 +4,62 @@ You are building a mobile application called **MemLists** — a combined app tha
 
 ---
 
+## SPEC REVIEW STATUS — 2026-04-15
+
+This spec was reviewed against the current codebase.
+
+### Overall status
+
+- **Memos core flow:** mostly implemented
+- **Reminder editor / scheduler / fullscreen alert:** mostly implemented, with a few lifecycle risks
+- **Memo photos:** mostly implemented
+- **Welcome / theme / localization / settings / backup-restore:** mostly implemented
+- **Lists module:** only partially implemented compared to this spec
+- **Hidden mode / private mode:** largely specified here, but not actually wired in the current app flow
+
+### Confirmed in code
+
+- Shared single SQLite database with `items`, `settings`, `photos`, `lists`, `dictionary`, `entries`
+- Welcome screen with language/theme selection
+- Theme and localization loading from assets
+- Memo editor with title/content/tags/priority/date/reminder controls
+- Daily, one-time, and period reminder scheduling
+- Reminder maintenance on app launch / restore / boot path
+- Settings screen with reminder master switch, default sound, sound repeats, backup/restore, CSV export
+- Memo photo gallery with camera/gallery import, fullscreen viewer, delete, share, temp-to-final move on save
+- Tag cloud and user filters
+
+### Spec/code mismatches and gaps
+
+- **§2.5 Edit/Add Item Screen:** the spec says one-time reminder dates must be rejected if they are already in the past. Current editor validation checks required fields and formats, but does not block saving a past one-time reminder.
+- **§2.9 Hidden Mode (Privacy):** this section is not implemented as described. The settings key exists, but the app flow reviewed here does not include the 4-tap activation flow, PIN prompts, orange private-mode app-bar behavior, or the 5-minute inactivity auto-exit described below.
+- **§3 Lists Module:** the current Lists implementation covers the basic home/detail/create flows, but many advanced behaviors in this section are not present yet.
+
+### Lists module gaps versus this spec
+
+- No visible PIN lock flow for opening lists
+- No long-press menus for home/list items
+- No move into folder / remove from folder actions
+- No edit flow for existing lists from the reviewed navigation
+- No edit flow for existing list entries from the reviewed navigation
+- No drag-reorder for unchecked entries
+- No top-right menu with move/share/comment/delete-done/clear-done actions
+- No large-font mode flow
+- No list-entry photo flow in the reviewed UI
+
+### Current code risks worth keeping in mind
+
+- Snoozed reminders are scheduled as separate alarms and are not cancelled together with the original reminder in all lifecycle paths.
+- Auto-deletion of expired one-time reminders can remove the memo without fully cleaning related photo rows/files.
+- Non-fullscreen reminder playback uses a service timeout estimate, so long custom sounds may be cut off early.
+
+### How to use this spec now
+
+- Treat the **Memos**, **Reminder**, **Photos**, **Welcome**, **Settings**, and **Backup/Restore** parts as mostly aligned with the shipped code.
+- Treat **Hidden Mode** and large parts of **Lists** as target-state spec, not as a precise description of the current implementation.
+
+---
+
 ## 1. ARCHITECTURE OVERVIEW
 
 ### 1.1 Two Modules, One App
@@ -131,7 +187,7 @@ Key-value table (`settings`) in the single shared database:
 | Enable reminders | "true" | Master reminder switch |
 | Debug logs | "false" | Console/file logging |
 | Default sound | null | Default reminder sound |
-| Sound repeats | "25" | Fullscreen alert sound repetitions |
+| Sound repeats | "10" | Fullscreen alert sound repetitions |
 | hiddpin | text | PIN for hidden mode |
 | auto_sort_dict | "true" | Auto-sort lists dictionary |
 | large_font_wakelock | "true" | Keep screen on in large font mode |
@@ -145,7 +201,7 @@ Shared table for photos across both modules:
 | id | int, PK, auto | Unique identifier |
 | owner_type | text | "memo" or "entry" |
 | owner_id | int | ID of the memo item or list entry |
-| path | text | File path relative to photo directory |
+| path | text | Absolute file path under app's internal `filesDir/photo/` |
 | sort_order | int | Display order |
 
 Photos stored in `{appDir}/photo/{owner_type}/{owner_id}/photo-{timestamp}.jpg`.
