@@ -3,6 +3,8 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N Lists: photo gallery in entry editor (camera/gallery pick, viewer, delete)
+- N Lists: photo count badge (icon + number) on list entries
 - F Lists: green/red snackbar on save success/failure in editors
 
 ## v0.2.20260416+178

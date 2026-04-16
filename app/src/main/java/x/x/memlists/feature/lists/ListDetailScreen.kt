@@ -52,6 +52,7 @@ import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
 import x.x.memlists.core.ui.ConfirmDeleteDialog
 import x.x.memlists.core.ui.UiTokens
+import androidx.compose.material.icons.filled.Image
 
 @Composable
 fun ListDetailScreen(
@@ -282,7 +283,8 @@ private fun ListEntryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
                 checked = checked,
@@ -307,6 +309,23 @@ private fun ListEntryCard(
                     Text(
                         text = quantityLine,
                         color = palette.clText.copy(alpha = 0.75f),
+                        fontSize = UiTokens.fsNormal
+                    )
+                }
+            }
+            if (entry.photoCount > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        tint = palette.clText
+                    )
+                    Text(
+                        text = entry.photoCount.toString(),
+                        color = palette.clText,
                         fontSize = UiTokens.fsNormal
                     )
                 }

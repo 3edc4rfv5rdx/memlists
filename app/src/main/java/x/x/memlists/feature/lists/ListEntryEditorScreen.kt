@@ -23,9 +23,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import x.x.memlists.MemListsApplication
+import x.x.memlists.core.photo.PhotoGallerySection
+import x.x.memlists.core.photo.PhotoOwnerType
+import x.x.memlists.core.photo.PhotoViewerOverlay
+import x.x.memlists.core.photo.rememberPhotoGalleryState
 import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
@@ -44,6 +49,7 @@ fun ListEntryEditorScreen(
     entryId: Long? = null
 ) {
     val palette = LocalAppThemePalette.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -51,6 +57,14 @@ fun ListEntryEditorScreen(
     var name by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
+
+    val photoGalleryState = rememberPhotoGalleryState(
+        context = context,
+        repository = application.photoRepository,
+        ownerType = PhotoOwnerType.Entry,
+        initialOwnerId = entryId
+    )
+    var viewerIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(entryId) {
         if (isEdit) {
@@ -79,12 +93,13 @@ fun ListEntryEditorScreen(
                         unit = unit.trim().ifBlank { null }
                     )
                 } else {
-                    application.repository.insertListEntry(
+                    val newId = application.repository.insertListEntry(
                         listId = listId,
                         name = trimmedName,
                         quantity = quantity.trim().ifBlank { null },
                         unit = unit.trim().ifBlank { null }
                     )
+                    photoGalleryState.commitPending(newId)
                 }
                 onSaved()
                 snackbarHostState.showThemedSnackbar(lw("Saved"), SnackbarTone.Success)
@@ -141,8 +156,35 @@ fun ListEntryEditorScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(lw("Unit")) }
                     )
+                    PhotoGallerySection(
+                        state = photoGalleryState,
+                        lw = lw,
+                        onOpenViewer = { viewerIndex = it }
+                    )
                 }
             }
+        }
+    }
+
+    viewerIndex?.let { startIndex ->
+        val entries = photoGalleryState.entries
+        if (entries.isEmpty()) {
+            viewerIndex = null
+        } else {
+            PhotoViewerOverlay(
+                entries = entries,
+                initialIndex = startIndex,
+                lw = lw,
+                onClose = { viewerIndex = null },
+                onDelete = { entry ->
+                    scope.launch {
+                        photoGalleryState.delete(entry)
+                        if (photoGalleryState.entries.isEmpty()) {
+                            viewerIndex = null
+                        }
+                    }
+                }
+            )
         }
     }
 }

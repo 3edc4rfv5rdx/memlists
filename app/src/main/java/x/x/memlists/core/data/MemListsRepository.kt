@@ -522,8 +522,7 @@ class MemListsRepository(
             cursor.getString(0) to cursor.getStringOrNull(1)
         }
 
-        val unchecked = mutableListOf<ListEntrySummary>()
-        val checked = mutableListOf<ListEntrySummary>()
+        val allEntries = mutableListOf<ListEntrySummary>()
         databaseHelper.readableDatabase.query(
             "entries",
             arrayOf("id", "list_id", "dict_id", "name", "unit", "quantity", "is_checked", "sort_order"),
@@ -534,21 +533,21 @@ class MemListsRepository(
             "is_checked ASC, sort_order ASC, id ASC"
         ).use { cursor ->
             while (cursor.moveToNext()) {
-                val entry = cursor.toListEntrySummary()
-                if (entry.isChecked) {
-                    checked += entry
-                } else {
-                    unchecked += entry
-                }
+                allEntries += cursor.toListEntrySummary()
             }
+        }
+
+        val photoCounts = loadEntryPhotoCountsBulk(allEntries.map { it.id })
+        val withPhotos = allEntries.map { entry ->
+            entry.copy(photoCount = photoCounts[entry.id] ?: 0)
         }
 
         ListDetailData(
             listId = listId,
             name = listRow.first,
             comment = listRow.second,
-            uncheckedEntries = unchecked,
-            checkedEntries = checked
+            uncheckedEntries = withPhotos.filter { !it.isChecked },
+            checkedEntries = withPhotos.filter { it.isChecked }
         )
     }
 
@@ -797,6 +796,21 @@ class MemListsRepository(
         val sql = "SELECT owner_id, COUNT(*) FROM photos " +
             "WHERE owner_type = 'memo' AND owner_id IN ($placeholders) GROUP BY owner_id"
         val args = memoIds.map { it.toString() }.toTypedArray()
+        val result = mutableMapOf<Long, Int>()
+        databaseHelper.readableDatabase.rawQuery(sql, args).use { cursor ->
+            while (cursor.moveToNext()) {
+                result[cursor.getLong(0)] = cursor.getInt(1)
+            }
+        }
+        return result
+    }
+
+    private fun loadEntryPhotoCountsBulk(entryIds: List<Long>): Map<Long, Int> {
+        if (entryIds.isEmpty()) return emptyMap()
+        val placeholders = entryIds.joinToString(",") { "?" }
+        val sql = "SELECT owner_id, COUNT(*) FROM photos " +
+            "WHERE owner_type = 'entry' AND owner_id IN ($placeholders) GROUP BY owner_id"
+        val args = entryIds.map { it.toString() }.toTypedArray()
         val result = mutableMapOf<Long, Int>()
         databaseHelper.readableDatabase.rawQuery(sql, args).use { cursor ->
             while (cursor.moveToNext()) {
