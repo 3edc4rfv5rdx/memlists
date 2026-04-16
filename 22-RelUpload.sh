@@ -71,6 +71,8 @@ if ! grep -q "^## ${TAG}$" CHANGELOG.md; then
     exit 1
 fi
 
+LEGEND_LINE=$(grep -m 1 '^> ' CHANGELOG.md || true)
+
 awk -v cur="## ${TAG}" -v stop="${PREV_TAG:+## ${PREV_TAG}}" '
     $0 == cur { capture=1; next }
     capture && stop != "" && $0 == stop { exit }
@@ -81,6 +83,15 @@ awk -v cur="## ${TAG}" -v stop="${PREV_TAG:+## ${PREV_TAG}}" '
 if [[ ! -s "$CHANGELOG_FILE" ]]; then
     echo "ERROR: No changelog notes found between $TAG and ${PREV_TAG:-end of file}."
     exit 1
+fi
+
+if [[ -n "$LEGEND_LINE" ]]; then
+    {
+        echo "$LEGEND_LINE"
+        echo
+        cat "$CHANGELOG_FILE"
+    } > "${CHANGELOG_FILE}.tmp"
+    mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
 fi
 
 echo "Generated changelog:"
