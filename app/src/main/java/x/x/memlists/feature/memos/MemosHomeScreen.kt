@@ -224,7 +224,8 @@ fun MemosHomeScreen(
             }
             DropdownMenu(
                 expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false }
+                onDismissRequest = { menuExpanded = false },
+                containerColor = palette.clMenu
             ) {
                 DropdownMenuItem(
                     text = { Text(lw("Clear All Filters"), fontSize = UiTokens.fsNormal, color = palette.clText) },

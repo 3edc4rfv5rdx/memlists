@@ -1,7 +1,13 @@
 package x.x.memlists.feature.lists
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +23,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -32,27 +44,39 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
 import x.x.memlists.core.data.ListEntrySummary
+import x.x.memlists.core.photo.MAX_PHOTOS_PER_OWNER
+import x.x.memlists.core.photo.PhotoEntry
+import x.x.memlists.core.photo.PhotoOwnerType
+import x.x.memlists.core.photo.PhotoRepository
+import x.x.memlists.core.photo.PhotoStorage
+import x.x.memlists.core.photo.PhotoViewerOverlay
 import x.x.memlists.core.theme.LocalAppThemePalette
+import x.x.memlists.core.ui.ConfirmDeleteDialog
 import x.x.memlists.core.ui.HeroCard
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
-import x.x.memlists.core.ui.ConfirmDeleteDialog
 import x.x.memlists.core.ui.UiTokens
-import androidx.compose.material.icons.filled.Image
+import java.io.File
 
 @Composable
 fun ListDetailScreen(
@@ -61,16 +85,109 @@ fun ListDetailScreen(
     isLoading: Boolean,
     uncheckedEntries: List<ListEntrySummary>,
     checkedEntries: List<ListEntrySummary>,
+    photoRepository: PhotoRepository,
     lw: (String) -> String,
     onNavigateBack: () -> Unit,
     onAddEntry: () -> Unit,
     onToggleChecked: (Long, Boolean) -> Unit,
     onEditEntry: (Long) -> Unit,
-    onDeleteEntry: (Long) -> Unit
+    onDeleteEntry: (Long) -> Unit,
+    onPhotosChanged: () -> Unit
 ) {
     val palette = LocalAppThemePalette.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     var pendingDeleteEntry by remember { mutableStateOf<ListEntrySummary?>(null) }
 
+    // Photo state
+    var addPhotoEntryId by remember { mutableStateOf<Long?>(null) }
+    var showSourceMenu by remember { mutableStateOf(false) }
+    var pendingCaptureFile by remember { mutableStateOf<File?>(null) }
+    var limitMessage by remember { mutableStateOf<String?>(null) }
+
+    var viewerEntryId by remember { mutableStateOf<Long?>(null) }
+    var viewerEntries by remember { mutableStateOf<List<PhotoEntry>>(emptyList()) }
+    var viewerDirty by remember { mutableStateOf(false) }
+
+    var removeAllEntryId by remember { mutableStateOf<Long?>(null) }
+
+    // Camera launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        val file = pendingCaptureFile
+        val entryId = addPhotoEntryId
+        pendingCaptureFile = null
+        addPhotoEntryId = null
+        if (success && file != null && entryId != null) {
+            scope.launch {
+                photoRepository.insert(PhotoOwnerType.Entry, entryId, file.absolutePath)
+                onPhotosChanged()
+            }
+        } else {
+            file?.delete()
+        }
+    }
+
+    fun launchCameraWithFile() {
+        val entryId = addPhotoEntryId ?: return
+        val dir = PhotoStorage.ownerDir(context, PhotoOwnerType.Entry, entryId)
+        val file = PhotoStorage.newPhotoFile(dir)
+        pendingCaptureFile = file
+        cameraLauncher.launch(PhotoStorage.contentUriFor(context, file))
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) launchCameraWithFile()
+    }
+
+    // Gallery launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        val entryId = addPhotoEntryId
+        addPhotoEntryId = null
+        if (uri != null && entryId != null) {
+            scope.launch {
+                val dir = PhotoStorage.ownerDir(context, PhotoOwnerType.Entry, entryId)
+                val dest = PhotoStorage.newPhotoFile(dir)
+                val ok = runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        dest.outputStream().use { output -> input.copyTo(output) }
+                    } != null
+                }.getOrDefault(false)
+                if (ok) {
+                    photoRepository.insert(PhotoOwnerType.Entry, entryId, dest.absolutePath)
+                } else {
+                    dest.delete()
+                }
+                onPhotosChanged()
+            }
+        }
+    }
+
+    fun requestAddPhoto(entryId: Long, currentCount: Int) {
+        if (currentCount >= MAX_PHOTOS_PER_OWNER) {
+            limitMessage = lw("Max photos reached")
+            return
+        }
+        addPhotoEntryId = entryId
+        showSourceMenu = true
+    }
+
+    fun openViewer(entryId: Long) {
+        viewerEntryId = entryId
+        viewerDirty = false
+        scope.launch {
+            val refs = photoRepository.list(PhotoOwnerType.Entry, entryId)
+            viewerEntries = refs.map { PhotoEntry(dbId = it.id, path = it.path) }
+        }
+    }
+
+    // Delete entry dialog
     pendingDeleteEntry?.let { target ->
         ConfirmDeleteDialog(
             title = lw("Delete item"),
@@ -157,7 +274,14 @@ fun ListDetailScreen(
                             lw = lw,
                             onToggleChecked = onToggleChecked,
                             onEdit = { onEditEntry(entry.id) },
-                            onRequestDelete = { pendingDeleteEntry = entry }
+                            onRequestDelete = { pendingDeleteEntry = entry },
+                            onAddPhoto = { requestAddPhoto(entry.id, entry.photoCount) },
+                            onViewPhotos = if (entry.photoCount > 0) {
+                                { openViewer(entry.id) }
+                            } else null,
+                            onRemovePhotos = if (entry.photoCount > 0) {
+                                { removeAllEntryId = entry.id }
+                            } else null
                         )
                     }
                 }
@@ -173,12 +297,149 @@ fun ListDetailScreen(
                             lw = lw,
                             onToggleChecked = onToggleChecked,
                             onEdit = { onEditEntry(entry.id) },
-                            onRequestDelete = { pendingDeleteEntry = entry }
+                            onRequestDelete = { pendingDeleteEntry = entry },
+                            onAddPhoto = { requestAddPhoto(entry.id, entry.photoCount) },
+                            onViewPhotos = if (entry.photoCount > 0) {
+                                { openViewer(entry.id) }
+                            } else null,
+                            onRemovePhotos = if (entry.photoCount > 0) {
+                                { removeAllEntryId = entry.id }
+                            } else null
                         )
                     }
                 }
             }
         }
+    }
+
+    // Source menu dialog (Camera / Gallery)
+    if (showSourceMenu) {
+        AlertDialog(
+            onDismissRequest = { showSourceMenu = false; addPhotoEntryId = null },
+            containerColor = palette.clMenu,
+            title = { Text(lw("Add photo"), color = palette.clText) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            showSourceMenu = false
+                            val granted = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (granted) launchCameraWithFile()
+                            else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.clUpBar,
+                            contentColor = palette.clText
+                        ),
+                        shape = UiTokens.shapeMedium,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                        Text("  ${lw("Camera")}")
+                    }
+                    Button(
+                        onClick = {
+                            showSourceMenu = false
+                            galleryLauncher.launch("image/*")
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = palette.clUpBar,
+                            contentColor = palette.clText
+                        ),
+                        shape = UiTokens.shapeMedium,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null)
+                        Text("  ${lw("Gallery")}")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSourceMenu = false; addPhotoEntryId = null }) {
+                    Text(lw("Cancel"), color = palette.clText)
+                }
+            }
+        )
+    }
+
+    // Photo limit dialog
+    limitMessage?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { limitMessage = null },
+            containerColor = palette.clMenu,
+            title = { Text(lw("Photos"), color = palette.clText) },
+            text = { Text(msg, color = palette.clText) },
+            confirmButton = {
+                TextButton(onClick = { limitMessage = null }) {
+                    Text("OK", color = palette.clText)
+                }
+            }
+        )
+    }
+
+    // Remove all photos confirmation
+    removeAllEntryId?.let { entryId ->
+        AlertDialog(
+            onDismissRequest = { removeAllEntryId = null },
+            containerColor = palette.clMenu,
+            title = { Text(lw("Remove all photos?"), color = palette.clText) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        removeAllEntryId = null
+                        scope.launch {
+                            photoRepository.deleteAllForOwner(PhotoOwnerType.Entry, entryId)
+                            onPhotosChanged()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text(lw("Delete")) }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { removeAllEntryId = null },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text(lw("Cancel")) }
+            }
+        )
+    }
+
+    // Photo viewer overlay
+    if (viewerEntryId != null && viewerEntries.isNotEmpty()) {
+        PhotoViewerOverlay(
+            entries = viewerEntries,
+            initialIndex = 0,
+            lw = lw,
+            onClose = {
+                viewerEntryId = null
+                if (viewerDirty) {
+                    viewerDirty = false
+                    onPhotosChanged()
+                }
+            },
+            onDelete = { entry ->
+                val dbId = entry.dbId ?: return@PhotoViewerOverlay
+                scope.launch {
+                    photoRepository.delete(dbId)
+                    viewerEntries = viewerEntries.filter { it.dbId != dbId }
+                    viewerDirty = true
+                    if (viewerEntries.isEmpty()) {
+                        viewerEntryId = null
+                        onPhotosChanged()
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -190,7 +451,10 @@ private fun SwipeableEntryRow(
     lw: (String) -> String,
     onToggleChecked: (Long, Boolean) -> Unit,
     onEdit: () -> Unit,
-    onRequestDelete: () -> Unit
+    onRequestDelete: () -> Unit,
+    onAddPhoto: () -> Unit,
+    onViewPhotos: (() -> Unit)?,
+    onRemovePhotos: (() -> Unit)?
 ) {
     val palette = LocalAppThemePalette.current
     @Suppress("DEPRECATION")
@@ -241,24 +505,47 @@ private fun SwipeableEntryRow(
             modifier = Modifier.combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onEdit,
+                onClick = {},
                 onLongClick = { contextMenuExpanded = true }
             )
         ) {
             ListEntryCard(
                 entry = entry,
                 checked = checked,
-                onToggleChecked = onToggleChecked
+                onToggleChecked = onToggleChecked,
+                onPhotoTap = onViewPhotos
             )
             DropdownMenu(
                 expanded = contextMenuExpanded,
                 onDismissRequest = { contextMenuExpanded = false },
-                offset = DpOffset(x = 120.dp, y = 0.dp)
+                offset = DpOffset(x = 120.dp, y = 0.dp),
+                containerColor = palette.clMenu
             ) {
                 DropdownMenuItem(
                     text = { Text(lw("Edit"), fontSize = UiTokens.fsNormal, color = palette.clText) },
                     onClick = { contextMenuExpanded = false; onEdit() }
                 )
+                val photoLabel = if (entry.photoCount > 0) {
+                    "${lw("Add photo")} (${entry.photoCount})"
+                } else {
+                    lw("Add photo")
+                }
+                DropdownMenuItem(
+                    text = { Text(photoLabel, fontSize = UiTokens.fsNormal, color = palette.clText) },
+                    onClick = { contextMenuExpanded = false; onAddPhoto() }
+                )
+                if (onViewPhotos != null) {
+                    DropdownMenuItem(
+                        text = { Text(lw("View photos"), fontSize = UiTokens.fsNormal, color = palette.clText) },
+                        onClick = { contextMenuExpanded = false; onViewPhotos() }
+                    )
+                }
+                if (onRemovePhotos != null) {
+                    DropdownMenuItem(
+                        text = { Text(lw("Remove photo"), fontSize = UiTokens.fsNormal, color = palette.clText) },
+                        onClick = { contextMenuExpanded = false; onRemovePhotos() }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(lw("Delete"), fontSize = UiTokens.fsNormal, color = palette.clText) },
                     onClick = { contextMenuExpanded = false; onRequestDelete() }
@@ -272,7 +559,8 @@ private fun SwipeableEntryRow(
 private fun ListEntryCard(
     entry: ListEntrySummary,
     checked: Boolean,
-    onToggleChecked: (Long, Boolean) -> Unit
+    onToggleChecked: (Long, Boolean) -> Unit,
+    onPhotoTap: (() -> Unit)? = null
 ) {
     val palette = LocalAppThemePalette.current
     Card(
@@ -315,6 +603,9 @@ private fun ListEntryCard(
             }
             if (entry.photoCount > 0) {
                 Row(
+                    modifier = if (onPhotoTap != null) {
+                        Modifier.clickable { onPhotoTap() }
+                    } else Modifier,
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {

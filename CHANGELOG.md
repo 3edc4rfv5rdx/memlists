@@ -5,6 +5,10 @@
 ## Unreleased
 - N Lists: photo gallery in entry editor (camera/gallery pick, viewer, delete)
 - N Lists: photo count badge (icon + number) on list entries
+- N Lists: photo actions in long-press menu (add/view/remove)
+- E Lists: delete entry/list now cleans up associated photos
+- F Lists: tap on photo badge opens viewer, tap on row no longer opens editor
+- F DropdownMenu uses palette.clMenu for consistent theming
 - F Lists: green/red snackbar on save success/failure in editors
 
 ## v0.2.20260416+178

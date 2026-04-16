@@ -373,6 +373,12 @@ fun MemListsApp() {
                     onDeleteList = { listId ->
                         listsScope.launch {
                             withContext(Dispatchers.IO) {
+                                listsApplication.repository.listEntryIds(listId).forEach { entryId ->
+                                    listsApplication.photoRepository.deleteAllForOwnerSync(
+                                        x.x.memlists.core.photo.PhotoOwnerType.Entry,
+                                        entryId
+                                    )
+                                }
                                 listsApplication.repository.deleteList(listId)
                             }
                             listsViewModel.refresh()
@@ -447,6 +453,7 @@ fun MemListsApp() {
                     isLoading = detailUiState.isLoading,
                     uncheckedEntries = detailUiState.uncheckedEntries,
                     checkedEntries = detailUiState.checkedEntries,
+                    photoRepository = detailApplication.photoRepository,
                     lw = lw,
                     onNavigateBack = { navController.popBackStack() },
                     onAddEntry = { navController.navigate(entryNewRoute(listId)) },
@@ -456,10 +463,15 @@ fun MemListsApp() {
                         detailScope.launch {
                             withContext(Dispatchers.IO) {
                                 detailApplication.repository.deleteListEntry(entryId)
+                                detailApplication.photoRepository.deleteAllForOwner(
+                                    x.x.memlists.core.photo.PhotoOwnerType.Entry,
+                                    entryId
+                                )
                             }
                             detailViewModel.load(listId)
                         }
-                    }
+                    },
+                    onPhotosChanged = { detailViewModel.load(listId) }
                 )
             }
             composable(Routes.EntryNew) { backStackEntry ->

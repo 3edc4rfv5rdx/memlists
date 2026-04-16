@@ -508,6 +508,17 @@ class MemListsRepository(
         databaseHelper.writableDatabase.delete("entries", "id = ?", arrayOf(entryId.toString()))
     }
 
+    fun listEntryIds(listId: Long): List<Long> {
+        val ids = mutableListOf<Long>()
+        databaseHelper.readableDatabase.query(
+            "entries", arrayOf("id"), "list_id = ?",
+            arrayOf(listId.toString()), null, null, null
+        ).use { cursor ->
+            while (cursor.moveToNext()) ids += cursor.getLong(0)
+        }
+        return ids
+    }
+
     suspend fun loadListDetail(listId: Long): ListDetailData = withContext(Dispatchers.IO) {
         val listRow = databaseHelper.readableDatabase.query(
             "lists",
