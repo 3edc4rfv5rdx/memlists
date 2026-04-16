@@ -28,7 +28,6 @@ import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.HeroCard
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
-import x.x.memlists.core.ui.SectionTitle
 import x.x.memlists.core.ui.UiTokens
 
 @Composable
@@ -41,7 +40,8 @@ fun ListDetailScreen(
     lw: (String) -> String,
     onNavigateBack: () -> Unit,
     onAddEntry: () -> Unit,
-    onToggleChecked: (Long, Boolean) -> Unit
+    onToggleChecked: (Long, Boolean) -> Unit,
+    onEditEntry: (Long) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
     ScreenScaffold(
@@ -67,13 +67,15 @@ fun ListDetailScreen(
                 .fillMaxWidth()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             comment?.takeIf { it.isNotBlank() }?.let { text ->
                 item {
-                    HeroCard(
-                        title = lw("Comment"),
-                        body = text
+                    Text(
+                        text = text,
+                        color = palette.clText.copy(alpha = 0.8f),
+                        fontSize = UiTokens.fsNormal,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -99,9 +101,6 @@ fun ListDetailScreen(
                     }
                 }
             } else {
-                item {
-                    SectionTitle(lw("Unchecked items"))
-                }
                 if (uncheckedEntries.isEmpty()) {
                     item {
                         HeroCard(
@@ -114,23 +113,22 @@ fun ListDetailScreen(
                         ListEntryCard(
                             entry = entry,
                             checked = false,
-                            onToggleChecked = onToggleChecked
+                            onToggleChecked = onToggleChecked,
+                            onEdit = { onEditEntry(entry.id) }
                         )
                     }
                 }
 
                 if (checkedEntries.isNotEmpty()) {
                     item {
-                        HorizontalDivider(color = palette.clMenu)
-                    }
-                    item {
-                        SectionTitle(lw("Checked items"))
+                        HorizontalDivider(color = palette.clText.copy(alpha = 0.4f), thickness = 2.dp)
                     }
                     items(checkedEntries, key = { it.id }) { entry ->
                         ListEntryCard(
                             entry = entry,
                             checked = true,
-                            onToggleChecked = onToggleChecked
+                            onToggleChecked = onToggleChecked,
+                            onEdit = { onEditEntry(entry.id) }
                         )
                     }
                 }
@@ -143,18 +141,20 @@ fun ListDetailScreen(
 private fun ListEntryCard(
     entry: ListEntrySummary,
     checked: Boolean,
-    onToggleChecked: (Long, Boolean) -> Unit
+    onToggleChecked: (Long, Boolean) -> Unit,
+    onEdit: () -> Unit
 ) {
     val palette = LocalAppThemePalette.current
     Card(
         shape = UiTokens.shapeLarge,
-        colors = CardDefaults.cardColors(containerColor = palette.clFill)
+        colors = CardDefaults.cardColors(containerColor = palette.clFill),
+        onClick = onEdit
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Checkbox(
                 checked = checked,

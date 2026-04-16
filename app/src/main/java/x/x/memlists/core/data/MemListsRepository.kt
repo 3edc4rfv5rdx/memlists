@@ -460,6 +460,39 @@ class MemListsRepository(
         databaseHelper.writableDatabase.insertOrThrow("lists", null, values)
     }
 
+    data class ListEditRow(val name: String, val comment: String?, val isFolder: Boolean)
+
+    suspend fun loadListById(listId: Long): ListEditRow = withContext(Dispatchers.IO) {
+        databaseHelper.readableDatabase.query(
+            "lists",
+            arrayOf("name", "comment", "is_folder"),
+            "id = ?",
+            arrayOf(listId.toString()),
+            null, null, null
+        ).use { cursor ->
+            require(cursor.moveToFirst()) { "List not found" }
+            ListEditRow(
+                name = cursor.getString(0),
+                comment = cursor.getStringOrNull(1),
+                isFolder = cursor.getInt(2) == 1
+            )
+        }
+    }
+
+    suspend fun updateList(
+        listId: Long,
+        name: String,
+        comment: String?
+    ) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            put("name", name)
+            if (comment == null) putNull("comment") else put("comment", comment)
+        }
+        databaseHelper.writableDatabase.update(
+            "lists", values, "id = ?", arrayOf(listId.toString())
+        )
+    }
+
     suspend fun loadListDetail(listId: Long): ListDetailData = withContext(Dispatchers.IO) {
         val listRow = databaseHelper.readableDatabase.query(
             "lists",
@@ -526,6 +559,35 @@ class MemListsRepository(
             put("sort_order", sortOrder)
         }
         databaseHelper.writableDatabase.insertOrThrow("entries", null, values)
+    }
+
+    suspend fun loadListEntry(entryId: Long): ListEntrySummary = withContext(Dispatchers.IO) {
+        databaseHelper.readableDatabase.query(
+            "entries",
+            arrayOf("id", "list_id", "dict_id", "name", "unit", "quantity", "is_checked", "sort_order"),
+            "id = ?",
+            arrayOf(entryId.toString()),
+            null, null, null
+        ).use { cursor ->
+            require(cursor.moveToFirst()) { "Entry not found" }
+            cursor.toListEntrySummary()
+        }
+    }
+
+    suspend fun updateListEntry(
+        entryId: Long,
+        name: String,
+        quantity: String?,
+        unit: String?
+    ) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            put("name", name)
+            if (quantity == null) putNull("quantity") else put("quantity", quantity)
+            if (unit == null) putNull("unit") else put("unit", unit)
+        }
+        databaseHelper.writableDatabase.update(
+            "entries", values, "id = ?", arrayOf(entryId.toString())
+        )
     }
 
     suspend fun updateEntryChecked(entryId: Long, isChecked: Boolean) = withContext(Dispatchers.IO) {

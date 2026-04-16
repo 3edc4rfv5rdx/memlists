@@ -33,7 +33,6 @@ import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.HeroCard
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
-import x.x.memlists.core.ui.SectionTitle
 import x.x.memlists.core.ui.UiTokens
 
 @Composable
@@ -87,7 +86,7 @@ fun ListsHomeScreen(
                 .fillMaxWidth()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             if (isLoading) {
                 item {
@@ -118,9 +117,6 @@ fun ListsHomeScreen(
                     )
                 }
             } else {
-                item {
-                    SectionTitle(title = lw("Folders and lists"))
-                }
                 items(containers, key = { it.id }) { container ->
                     ListContainerCard(
                         container = container,
@@ -155,8 +151,8 @@ private fun ListContainerCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
                 imageVector = if (container.isFolder) Icons.Default.FolderCopy else Icons.Default.Checklist,

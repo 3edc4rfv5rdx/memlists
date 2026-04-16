@@ -3,6 +3,9 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- N Lists: edit list/folder and edit entry flows with save icon in app bar
+- F Lists: compact card padding, tighter vertical spacing, brighter divider
+- F Lists: autofocus name field, floating labels, remove redundant section titles
 - F MemoEditor: show Saved snackbar on first save too, not only on edits
 - E Reminder sound: poll isPlaying + OnCompletion, don't trust reported duration
 - E Reminder sound service stops on real playback end, not on 10s*cycles estimate

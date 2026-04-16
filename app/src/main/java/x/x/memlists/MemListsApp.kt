@@ -44,8 +44,10 @@ private object Routes {
     const val MemoNew = "memo_new"
     const val MemoEdit = "memo_edit/{id}"
     const val ListNew = "list_new/{parentId}/{isFolder}"
+    const val ListEdit = "list_edit/{listId}"
     const val ListDetail = "list_detail/{listId}"
     const val EntryNew = "entry_new/{listId}"
+    const val EntryEdit = "entry_edit/{listId}/{entryId}"
     const val TagCloud = "tag_cloud"
     const val UserFilters = "user_filters"
 }
@@ -55,6 +57,8 @@ private fun listNewRoute(parentId: Long?, isFolder: Boolean): String {
     val encodedFolder = if (isFolder) 1 else 0
     return "list_new/$encodedParent/$encodedFolder"
 }
+
+private fun listEditRoute(listId: Long): String = "list_edit/$listId"
 
 private fun listDetailRoute(listId: Long): String = "list_detail/$listId"
 
@@ -88,6 +92,8 @@ private fun popIfOnTop(
 }
 
 private fun entryNewRoute(listId: Long): String = "entry_new/$listId"
+
+private fun entryEditRoute(listId: Long, entryId: Long): String = "entry_edit/$listId/$entryId"
 
 @Composable
 fun MemListsApp() {
@@ -378,6 +384,26 @@ fun MemListsApp() {
                     }
                 )
             }
+            composable(Routes.ListEdit) { backStackEntry ->
+                val application = LocalContext.current.applicationContext as MemListsApplication
+                val editListId = backStackEntry.arguments?.getString("listId")?.toLongOrNull()
+                if (editListId == null) {
+                    navController.popBackStack()
+                    return@composable
+                }
+                ListEditorScreen(
+                    application = application,
+                    isFolder = false,
+                    parentId = null,
+                    lw = lw,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaved = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("lists_refresh", true)
+                        navController.popBackStack()
+                    },
+                    listId = editListId
+                )
+            }
             composable(Routes.ListDetail) { backStackEntry ->
                 val listId = backStackEntry.arguments?.getString("listId")?.toLongOrNull() ?: return@composable
                 val detailViewModel: ListDetailViewModel = viewModel()
@@ -407,7 +433,8 @@ fun MemListsApp() {
                     lw = lw,
                     onNavigateBack = { navController.popBackStack() },
                     onAddEntry = { navController.navigate(entryNewRoute(listId)) },
-                    onToggleChecked = detailViewModel::toggleChecked
+                    onToggleChecked = detailViewModel::toggleChecked,
+                    onEditEntry = { entryId -> navController.navigate(entryEditRoute(listId, entryId)) }
                 )
             }
             composable(Routes.EntryNew) { backStackEntry ->
@@ -422,6 +449,22 @@ fun MemListsApp() {
                         navController.previousBackStackEntry?.savedStateHandle?.set("list_detail_refresh", true)
                         navController.popBackStack()
                     }
+                )
+            }
+            composable(Routes.EntryEdit) { backStackEntry ->
+                val application = LocalContext.current.applicationContext as MemListsApplication
+                val editListId = backStackEntry.arguments?.getString("listId")?.toLongOrNull() ?: return@composable
+                val editEntryId = backStackEntry.arguments?.getString("entryId")?.toLongOrNull() ?: return@composable
+                ListEntryEditorScreen(
+                    application = application,
+                    listId = editListId,
+                    lw = lw,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaved = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("list_detail_refresh", true)
+                        navController.popBackStack()
+                    },
+                    entryId = editEntryId
                 )
             }
             composable(Routes.Settings) {
