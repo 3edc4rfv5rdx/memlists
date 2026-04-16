@@ -8,6 +8,7 @@ data class AppUiState(
     val isLoading: Boolean = true,
     val settings: SettingsData = SettingsData(),
     val languages: List<LanguageOption> = emptyList(),
-    val themes: List<AppThemePalette> = emptyList()
+    val themes: List<AppThemePalette> = emptyList(),
+    val maintenanceTick: Int = 0
 )
 

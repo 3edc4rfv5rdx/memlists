@@ -146,6 +146,12 @@ fun MemListsApp() {
                     memosViewModel.refreshIfNeeded(newestFirst = uiState.settings.newestFirst)
                 }
 
+                LaunchedEffect(uiState.maintenanceTick) {
+                    if (uiState.maintenanceTick > 0) {
+                        memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                    }
+                }
+
                 LaunchedEffect(shouldRefresh) {
                     if (shouldRefresh) {
                         memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)

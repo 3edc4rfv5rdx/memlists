@@ -50,6 +50,7 @@ class AppViewModel(
                 } catch (e: Exception) {
                     android.util.Log.e("MemLists", "Maintenance failed: ${e.message}", e)
                 }
+                _uiState.update { it.copy(maintenanceTick = it.maintenanceTick + 1) }
             }
         }
     }
