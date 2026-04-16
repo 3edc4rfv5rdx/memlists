@@ -60,9 +60,7 @@ else
         /^## Unreleased$/ {
             # Keep Unreleased at the top and add the new release section right after it.
             print $0
-            print ""
             print "## " tag
-            print ""
             in_unreleased=1
             next
         }
