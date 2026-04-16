@@ -369,7 +369,7 @@ fun MemListsApp() {
                     onOpenList = { listId -> navController.navigate(listDetailRoute(listId)) },
                     onAddList = { navController.navigate(listNewRoute(listsUiState.currentFolderId, isFolder = false)) },
                     onAddFolder = { navController.navigate(listNewRoute(null, isFolder = true)) },
-                    onEditList = { listId -> navController.navigate(listEditRoute(listId)) },
+                    onEditList = { listId -> navController.navigate(listEditRoute(listId)) { launchSingleTop = true } },
                     onDeleteList = { listId ->
                         listsScope.launch {
                             withContext(Dispatchers.IO) {
@@ -408,10 +408,12 @@ fun MemListsApp() {
                     isFolder = false,
                     parentId = null,
                     lw = lw,
-                    onNavigateBack = { navController.popBackStack() },
-                    onSaved = {
+                    onNavigateBack = {
                         navController.previousBackStackEntry?.savedStateHandle?.set("lists_refresh", true)
                         navController.popBackStack()
+                    },
+                    onSaved = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("lists_refresh", true)
                     },
                     listId = editListId
                 )
@@ -449,7 +451,7 @@ fun MemListsApp() {
                     onNavigateBack = { navController.popBackStack() },
                     onAddEntry = { navController.navigate(entryNewRoute(listId)) },
                     onToggleChecked = detailViewModel::toggleChecked,
-                    onEditEntry = { entryId -> navController.navigate(entryEditRoute(listId, entryId)) },
+                    onEditEntry = { entryId -> navController.navigate(entryEditRoute(listId, entryId)) { launchSingleTop = true } },
                     onDeleteEntry = { entryId ->
                         detailScope.launch {
                             withContext(Dispatchers.IO) {
@@ -482,10 +484,12 @@ fun MemListsApp() {
                     application = application,
                     listId = editListId,
                     lw = lw,
-                    onNavigateBack = { navController.popBackStack() },
-                    onSaved = {
+                    onNavigateBack = {
                         navController.previousBackStackEntry?.savedStateHandle?.set("list_detail_refresh", true)
                         navController.popBackStack()
+                    },
+                    onSaved = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("list_detail_refresh", true)
                     },
                     entryId = editEntryId
                 )

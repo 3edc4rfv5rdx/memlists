@@ -8,6 +8,8 @@
 - N Lists: delete confirmation dialog via shared ConfirmDeleteDialog
 - F Lists: compact card padding, tighter vertical spacing, brighter divider
 - F Lists: autofocus name field, floating labels, remove redundant section titles
+- E Lists: fix double-navigate on swipe-to-edit via launchSingleTop
+- E Lists: edit mode save stays on screen instead of popping back
 - R Extract shared ConfirmDeleteDialog from three duplicate inline dialogs
 - F MemoEditor: show Saved snackbar on first save too, not only on edits
 - E Reminder sound: poll isPlaying + OnCompletion, don't trust reported duration
