@@ -40,9 +40,6 @@ if git tag --list "$TAG" | grep -q "$TAG"; then
     exit 0
 fi
 
-echo "=== Creating tag $TAG ==="
-git tag -a "$TAG" -m "Build $build"
-
 if [[ ! -f "$CHANGELOG_FILE" ]]; then
     echo "ERROR: $CHANGELOG_FILE not found."
     exit 1
@@ -79,7 +76,14 @@ else
     fi
 
     mv "$updated_changelog" "$CHANGELOG_FILE"
+
+    echo "=== Committing changelog update ==="
+    git add "$CHANGELOG_FILE"
+    git commit -m "Add release notes for $TAG"
 fi
+
+echo "=== Creating tag $TAG ==="
+git tag -a "$TAG" -m "Build $build"
 
 echo "=== Done: tag $TAG created ==="
 
