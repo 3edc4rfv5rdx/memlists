@@ -27,10 +27,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import x.x.memlists.core.theme.LocalAppThemePalette
+import x.x.memlists.core.ui.UiTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -114,18 +117,34 @@ fun PhotoViewerOverlay(
     }
 
     if (confirmDelete) {
+        val palette = LocalAppThemePalette.current
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(lw("Delete photo?")) },
+            containerColor = palette.clMenu,
+            title = { Text(lw("Delete photo?"), color = palette.clText) },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmDelete = false
-                    val entry = entries.getOrNull(pagerState.currentPage) ?: return@TextButton
-                    scope.launch { onDelete(entry) }
-                }) { Text(lw("Delete")) }
+                Button(
+                    onClick = {
+                        confirmDelete = false
+                        val entry = entries.getOrNull(pagerState.currentPage) ?: return@Button
+                        scope.launch { onDelete(entry) }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text(lw("Delete")) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text(lw("Cancel")) }
+                Button(
+                    onClick = { confirmDelete = false },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text(lw("Cancel")) }
             }
         )
     }

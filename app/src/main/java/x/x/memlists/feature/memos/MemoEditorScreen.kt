@@ -388,10 +388,8 @@ fun MemoEditorScreen(
                     // BackHandler stays in "swallow" mode until the composable leaves.
                     Log.d("MemoEditor", "save coroutine done, calling onSaved(itemId=$itemId)")
                     onSaved(itemId)
-                    if (memoId != null) {
-                        canSave = true
-                        showSaved(lw("Saved"))
-                    }
+                    canSave = true
+                    showSaved(lw("Saved"))
                 }
             }
         }

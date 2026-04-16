@@ -224,15 +224,27 @@ fun PhotoGallerySection(
             containerColor = palette.clMenu,
             title = { Text(lw("Delete photo?"), color = palette.clText) },
             confirmButton = {
-                TextButton(onClick = {
-                    scope.launch { state.delete(entry) }
-                    pendingDelete = null
-                }) { Text(lw("Delete"), color = palette.clText) }
+                Button(
+                    onClick = {
+                        scope.launch { state.delete(entry) }
+                        pendingDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text(lw("Delete")) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) {
-                    Text(lw("Cancel"), color = palette.clText)
-                }
+                Button(
+                    onClick = { pendingDelete = null },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text(lw("Cancel")) }
             }
         )
     }
