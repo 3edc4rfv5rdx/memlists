@@ -74,6 +74,10 @@ class PhotoRepository(
         ownerType: PhotoOwnerType,
         ownerId: Long
     ) = withContext(Dispatchers.IO) {
+        deleteAllForOwnerSync(ownerType, ownerId)
+    }
+
+    fun deleteAllForOwnerSync(ownerType: PhotoOwnerType, ownerId: Long) {
         databaseHelper.writableDatabase.delete(
             "photos",
             "owner_type = ? AND owner_id = ?",

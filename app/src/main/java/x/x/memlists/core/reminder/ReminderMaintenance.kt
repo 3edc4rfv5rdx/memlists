@@ -2,8 +2,10 @@ package x.x.memlists.core.reminder
 
 import android.content.Context
 import android.util.Log
+import x.x.memlists.MemListsApplication
 import x.x.memlists.core.data.MemListsRepository
 import x.x.memlists.core.data.todayAsInt
+import x.x.memlists.core.photo.PhotoOwnerType
 import java.util.Calendar
 
 object ReminderMaintenance {
@@ -18,7 +20,7 @@ object ReminderMaintenance {
         val today = todayAsInt()
         Log.d(TAG, "Maintenance: today=$today")
 
-        deleteExpired(repository, today)
+        deleteExpired(context, repository, today)
         advanceYearly(repository, today)
         advanceMonthly(repository, today)
         ReminderScheduler.rescheduleAll(context, repository)
@@ -27,13 +29,17 @@ object ReminderMaintenance {
     /**
      * Delete one-time reminders with auto-remove flag whose date is strictly
      * in the past (next day after firing). Includes already-deactivated items.
+     * Also cleans up any photos attached to deleted items.
      */
-    private fun deleteExpired(repository: MemListsRepository, today: Int) {
+    private fun deleteExpired(context: Context, repository: MemListsRepository, today: Int) {
         val items = repository.getAutoRemoveOneTimeRemindersSync()
+        val photoRepository = (context.applicationContext as MemListsApplication).photoRepository
         var count = 0
         for (item in items) {
             val date = item.date ?: continue
             if (date < today) {
+                ReminderScheduler.cancelItem(context, item.id)
+                photoRepository.deleteAllForOwnerSync(PhotoOwnerType.Memo, item.id)
                 repository.deleteItemSync(item.id)
                 count++
             }

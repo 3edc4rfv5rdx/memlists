@@ -3,6 +3,8 @@ package x.x.memlists.core.reminder
 import android.content.Context
 import android.media.MediaPlayer
 import android.util.Log
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Shared sound playback for reminders.
@@ -23,7 +25,7 @@ object ReminderSoundPlayer {
     private var activeThread: Thread? = null
     private var activePlayer: MediaPlayer? = null
 
-    fun start(context: Context, soundValue: String?, repeats: Int) {
+    fun start(context: Context, soundValue: String?, repeats: Int, onFinished: (() -> Unit)? = null) {
         synchronized(lock) {
             if (activeThread != null) {
                 Log.w(TAG, "ReminderSoundPlayer: thread already running, skip start")
@@ -44,11 +46,18 @@ object ReminderSoundPlayer {
 
                     val player = MediaPlayer()
                     val durationMs: Int
+                    val completion = CountDownLatch(1)
                     try {
                         player.setAudioAttributes(SoundUtils.alarmAudioAttributes)
                         SoundUtils.routeToSpeaker(player, ctx)
                         player.setDataSource(ctx, uri)
                         player.isLooping = false
+                        player.setOnCompletionListener { completion.countDown() }
+                        player.setOnErrorListener { _, what, extra ->
+                            Log.e(TAG, "MediaPlayer error what=$what extra=$extra")
+                            completion.countDown()
+                            true
+                        }
                         player.prepare()
                         durationMs = player.duration.coerceAtLeast(500)
                         player.start()
@@ -60,8 +69,21 @@ object ReminderSoundPlayer {
                     synchronized(lock) { activePlayer = player }
                     Log.d(TAG, "ReminderSoundPlayer: cycle $i/$cycles duration=${durationMs}ms")
 
+                    // Wait for end: poll isPlaying + listen for onCompletion. Works for both
+                    // file URIs (onCompletion fires) and system ringtones (isPlaying flips false).
+                    // Hard safety cap at 30 min per cycle against hung players.
+                    val deadline = System.currentTimeMillis() + 30L * 60_000L
                     try {
-                        Thread.sleep(durationMs.toLong())
+                        while (completion.count > 0L) {
+                            if (Thread.currentThread().isInterrupted) { interrupted = true; break }
+                            if (completion.await(250, TimeUnit.MILLISECONDS)) break
+                            val stillPlaying = try { player.isPlaying } catch (_: Exception) { false }
+                            if (!stillPlaying) break
+                            if (System.currentTimeMillis() > deadline) {
+                                Log.w(TAG, "ReminderSoundPlayer: cycle safety cap hit")
+                                break
+                            }
+                        }
                     } catch (_: InterruptedException) {
                         interrupted = true
                     }
@@ -81,6 +103,7 @@ object ReminderSoundPlayer {
                 }
                 Log.d(TAG, "ReminderSoundPlayer: thread finished (interrupted=$interrupted)")
                 synchronized(lock) { activeThread = null }
+                if (!interrupted) onFinished?.invoke()
             }
             activeThread = t
             t.start()

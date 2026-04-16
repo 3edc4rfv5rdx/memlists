@@ -33,6 +33,7 @@ object ReminderScheduler {
         cancelOneTime(context, itemId)
         cancelAllDaily(context, itemId)
         cancelAllPeriod(context, itemId)
+        cancelSnooze(context, itemId.toInt())
     }
 
     fun cancelAll(context: Context, repository: MemListsRepository) {
@@ -248,6 +249,13 @@ object ReminderScheduler {
         val requestCode = 1000000 + itemId
         scheduleAlarmClock(context, requestCode, intent, calendar)
         Log.d(TAG, "Snoozed reminder $itemId for $minutesFromNow min -> ${calendar.time}")
+    }
+
+    fun cancelSnooze(context: Context, itemId: Int) {
+        val intent = Intent(context, ReminderReceiver::class.java).apply {
+            action = ReminderActions.SNOOZED_REMINDER
+        }
+        cancelAlarm(context, 1000000 + itemId, intent)
     }
 
     // --- Helpers ---

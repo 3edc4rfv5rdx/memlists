@@ -54,7 +54,12 @@ class ReminderSoundService : Service() {
                 val notification = buildReminderNotification(notificationId, title, content, channelId, ongoing = true)
                 startForeground(notificationId, notification)
                 Log.d(TAG, "Service ACTION_PLAY notifId=$notificationId repeatCount=$repeatCount")
-                ReminderSoundPlayer.start(applicationContext, soundValue, repeatCount)
+                ReminderSoundPlayer.start(applicationContext, soundValue, repeatCount) {
+                    handler.post {
+                        Log.d(TAG, "Service: player finished, detaching")
+                        detachAndStop()
+                    }
+                }
                 scheduleSelfStop(repeatCount)
             }
             ACTION_STOP -> {
@@ -69,15 +74,15 @@ class ReminderSoundService : Service() {
     }
 
     /**
-     * Foreground service must stop itself after playback finishes — otherwise the
-     * reminder notification keeps the "ongoing" flag forever. Estimate generously: cap*10s.
+     * Safety net: if the player callback never fires (hung MediaPlayer, etc.) we
+     * still stop the foreground after an upper-bound time. Real playback length
+     * is handled by ReminderSoundPlayer's onFinished callback above.
      */
     private fun scheduleSelfStop(repeatCount: Int) {
         stopRunnable?.let { handler.removeCallbacks(it) }
-        val cycles = repeatCount.coerceIn(1, 26)
-        val totalMs = cycles * 10_000L + 5_000L
+        val totalMs = 30L * 60_000L
         val r = Runnable {
-            Log.d(TAG, "Service self-stop after ${totalMs}ms")
+            Log.d(TAG, "Service safety self-stop after ${totalMs}ms")
             ReminderSoundPlayer.stop()
             detachAndStop()
         }
