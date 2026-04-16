@@ -4,8 +4,11 @@
 
 ## Unreleased
 - N Lists: edit list/folder and edit entry flows with save icon in app bar
+- N Lists: swipe right to edit, swipe left to delete, long-press context menu
+- N Lists: delete confirmation dialog via shared ConfirmDeleteDialog
 - F Lists: compact card padding, tighter vertical spacing, brighter divider
 - F Lists: autofocus name field, floating labels, remove redundant section titles
+- R Extract shared ConfirmDeleteDialog from three duplicate inline dialogs
 - F MemoEditor: show Saved snackbar on first save too, not only on edits
 - E Reminder sound: poll isPlaying + OnCompletion, don't trust reported duration
 - E Reminder sound service stops on real playback end, not on 10s*cycles estimate

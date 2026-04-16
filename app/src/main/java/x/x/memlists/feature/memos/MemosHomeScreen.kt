@@ -27,7 +27,7 @@ import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AlertDialog
+import x.x.memlists.core.ui.ConfirmDeleteDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -127,48 +127,16 @@ fun MemosHomeScreen(
         }
     }
     pendingDelete?.let { target ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            containerColor = palette.clMenu,
-            title = {
-                Text(
-                    text = lw("Delete memo") + "?",
-                    color = palette.clText,
-                    fontSize = UiTokens.fsMedium,
-                    fontWeight = FontWeight.Bold
-                )
+        ConfirmDeleteDialog(
+            title = lw("Delete memo"),
+            itemName = target.title,
+            lw = lw,
+            onConfirm = {
+                val toDelete = target
+                pendingDelete = null
+                onDeleteMemo(toDelete)
             },
-            text = {
-                Text(
-                    text = target.title,
-                    color = palette.clText,
-                    fontSize = UiTokens.fsNormal
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val toDelete = target
-                        pendingDelete = null
-                        onDeleteMemo(toDelete)
-                    },
-                    shape = UiTokens.shapeMedium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Red,
-                        contentColor = Color.White
-                    )
-                ) { Text(lw("Delete"), fontSize = UiTokens.fsNormal) }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { pendingDelete = null },
-                    shape = UiTokens.shapeMedium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.clUpBar,
-                        contentColor = palette.clText
-                    )
-                ) { Text(lw("Cancel"), fontSize = UiTokens.fsNormal) }
-            }
+            onDismiss = { pendingDelete = null }
         )
     }
     if (showTodayRemindersDialog) {

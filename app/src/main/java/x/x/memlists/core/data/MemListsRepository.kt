@@ -493,6 +493,21 @@ class MemListsRepository(
         )
     }
 
+    suspend fun deleteList(listId: Long) = withContext(Dispatchers.IO) {
+        val db = databaseHelper.writableDatabase
+        // If folder, move children to root before deleting
+        db.execSQL(
+            "UPDATE lists SET parent_id = NULL WHERE parent_id = ?",
+            arrayOf(listId.toString())
+        )
+        // CASCADE deletes entries
+        db.delete("lists", "id = ?", arrayOf(listId.toString()))
+    }
+
+    suspend fun deleteListEntry(entryId: Long) = withContext(Dispatchers.IO) {
+        databaseHelper.writableDatabase.delete("entries", "id = ?", arrayOf(entryId.toString()))
+    }
+
     suspend fun loadListDetail(listId: Long): ListDetailData = withContext(Dispatchers.IO) {
         val listRow = databaseHelper.readableDatabase.query(
             "lists",

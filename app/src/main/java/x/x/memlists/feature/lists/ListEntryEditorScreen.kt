@@ -48,20 +48,16 @@ fun ListEntryEditorScreen(
     var quantity by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
     var validationMessage by remember { mutableStateOf<String?>(null) }
-    var loaded by remember { mutableStateOf(!isEdit) }
 
-    if (isEdit) {
-        LaunchedEffect(entryId) {
+    LaunchedEffect(entryId) {
+        if (isEdit) {
             val entry = application.repository.loadListEntry(entryId)
             name = entry.name
             quantity = entry.quantity.orEmpty()
             unit = entry.unit.orEmpty()
-            loaded = true
+        } else {
+            focusRequester.requestFocus()
         }
-    }
-
-    LaunchedEffect(loaded) {
-        if (loaded) focusRequester.requestFocus()
     }
 
     fun save() {
@@ -105,7 +101,6 @@ fun ListEntryEditorScreen(
         }
     ) { paddingValues ->
         ScrollableScreen(paddingValues = paddingValues) {
-            if (!loaded) return@ScrollableScreen
             Card(
                 shape = UiTokens.shapeLarge,
                 colors = CardDefaults.cardColors(containerColor = palette.clFill)

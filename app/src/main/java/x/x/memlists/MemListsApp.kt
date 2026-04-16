@@ -349,6 +349,9 @@ fun MemListsApp() {
                     }
                 }
 
+                val listsApplication = LocalContext.current.applicationContext as MemListsApplication
+                val listsScope = rememberCoroutineScope()
+
                 ListsHomeScreen(
                     currentFolderName = listsUiState.currentFolderName,
                     currentFolderId = listsUiState.currentFolderId,
@@ -365,7 +368,16 @@ fun MemListsApp() {
                     onOpenFolder = listsViewModel::openFolder,
                     onOpenList = { listId -> navController.navigate(listDetailRoute(listId)) },
                     onAddList = { navController.navigate(listNewRoute(listsUiState.currentFolderId, isFolder = false)) },
-                    onAddFolder = { navController.navigate(listNewRoute(null, isFolder = true)) }
+                    onAddFolder = { navController.navigate(listNewRoute(null, isFolder = true)) },
+                    onEditList = { listId -> navController.navigate(listEditRoute(listId)) },
+                    onDeleteList = { listId ->
+                        listsScope.launch {
+                            withContext(Dispatchers.IO) {
+                                listsApplication.repository.deleteList(listId)
+                            }
+                            listsViewModel.refresh()
+                        }
+                    }
                 )
             }
             composable(Routes.ListNew) { backStackEntry ->
@@ -424,6 +436,9 @@ fun MemListsApp() {
                     }
                 }
 
+                val detailApplication = LocalContext.current.applicationContext as MemListsApplication
+                val detailScope = rememberCoroutineScope()
+
                 ListDetailScreen(
                     title = detailUiState.title,
                     comment = detailUiState.comment,
@@ -434,7 +449,15 @@ fun MemListsApp() {
                     onNavigateBack = { navController.popBackStack() },
                     onAddEntry = { navController.navigate(entryNewRoute(listId)) },
                     onToggleChecked = detailViewModel::toggleChecked,
-                    onEditEntry = { entryId -> navController.navigate(entryEditRoute(listId, entryId)) }
+                    onEditEntry = { entryId -> navController.navigate(entryEditRoute(listId, entryId)) },
+                    onDeleteEntry = { entryId ->
+                        detailScope.launch {
+                            withContext(Dispatchers.IO) {
+                                detailApplication.repository.deleteListEntry(entryId)
+                            }
+                            detailViewModel.load(listId)
+                        }
+                    }
                 )
             }
             composable(Routes.EntryNew) { backStackEntry ->

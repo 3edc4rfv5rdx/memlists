@@ -1,38 +1,59 @@
 package x.x.memlists.feature.lists
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import x.x.memlists.core.data.ListContainerSummary
 import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.HeroCard
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
+import x.x.memlists.core.ui.ConfirmDeleteDialog
 import x.x.memlists.core.ui.UiTokens
 
 @Composable
@@ -46,9 +67,27 @@ fun ListsHomeScreen(
     onOpenFolder: (Long) -> Unit,
     onOpenList: (Long) -> Unit,
     onAddList: () -> Unit,
-    onAddFolder: () -> Unit
+    onAddFolder: () -> Unit,
+    onEditList: (Long) -> Unit,
+    onDeleteList: (Long) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
+    var pendingDelete by remember { mutableStateOf<ListContainerSummary?>(null) }
+
+    pendingDelete?.let { target ->
+        ConfirmDeleteDialog(
+            title = lw(if (target.isFolder) "Delete folder" else "Delete list"),
+            itemName = target.name,
+            lw = lw,
+            onConfirm = {
+                val id = target.id
+                pendingDelete = null
+                onDeleteList(id)
+            },
+            onDismiss = { pendingDelete = null }
+        )
+    }
+
     ScreenScaffold(
         title = lw(currentFolderName ?: "Lists"),
         navigationButtonMode = NavigationButtonMode.Back,
@@ -118,10 +157,15 @@ fun ListsHomeScreen(
                 }
             } else {
                 items(containers, key = { it.id }) { container ->
-                    ListContainerCard(
+                    SwipeableContainerRow(
                         container = container,
-                        onOpenFolder = onOpenFolder,
-                        onOpenList = onOpenList
+                        lw = lw,
+                        onOpen = {
+                            if (container.isFolder) onOpenFolder(container.id)
+                            else onOpenList(container.id)
+                        },
+                        onEdit = { onEditList(container.id) },
+                        onRequestDelete = { pendingDelete = container }
                     )
                 }
             }
@@ -129,24 +173,94 @@ fun ListsHomeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-private fun ListContainerCard(
+private fun SwipeableContainerRow(
     container: ListContainerSummary,
-    onOpenFolder: (Long) -> Unit,
-    onOpenList: (Long) -> Unit
+    lw: (String) -> String,
+    onOpen: () -> Unit,
+    onEdit: () -> Unit,
+    onRequestDelete: () -> Unit
 ) {
+    val palette = LocalAppThemePalette.current
+    @Suppress("DEPRECATION")
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> { onEdit(); false }
+                SwipeToDismissBoxValue.EndToStart -> { onRequestDelete(); false }
+                else -> true
+            }
+        }
+    )
+    var contextMenuExpanded by remember { mutableStateOf(false) }
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val isEdit = direction == SwipeToDismissBoxValue.StartToEnd
+            val isDelete = direction == SwipeToDismissBoxValue.EndToStart
+            val bgColor = when {
+                isEdit -> palette.clSel
+                isDelete -> Color.Red
+                else -> Color.Transparent
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(bgColor, UiTokens.shapeLarge)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = if (isEdit) Alignment.CenterStart else Alignment.CenterEnd
+            ) {
+                when {
+                    isEdit -> Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = lw("Edit"),
+                        tint = palette.clText
+                    )
+                    isDelete -> Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = lw("Delete"),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    ) {
+        Box(
+            modifier = Modifier.combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onOpen,
+                onLongClick = { contextMenuExpanded = true }
+            )
+        ) {
+            ListContainerCard(container = container)
+            DropdownMenu(
+                expanded = contextMenuExpanded,
+                onDismissRequest = { contextMenuExpanded = false },
+                offset = DpOffset(x = 120.dp, y = 0.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(lw("Edit"), fontSize = UiTokens.fsNormal, color = palette.clText) },
+                    onClick = { contextMenuExpanded = false; onEdit() }
+                )
+                DropdownMenuItem(
+                    text = { Text(lw("Delete"), fontSize = UiTokens.fsNormal, color = palette.clText) },
+                    onClick = { contextMenuExpanded = false; onRequestDelete() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListContainerCard(container: ListContainerSummary) {
     val palette = LocalAppThemePalette.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = UiTokens.shapeLarge,
-        colors = CardDefaults.cardColors(containerColor = palette.clFill),
-        onClick = {
-            if (container.isFolder) {
-                onOpenFolder(container.id)
-            } else {
-                onOpenList(container.id)
-            }
-        }
+        colors = CardDefaults.cardColors(containerColor = palette.clFill)
     ) {
         Row(
             modifier = Modifier

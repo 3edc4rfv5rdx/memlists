@@ -1,33 +1,56 @@
 package x.x.memlists.feature.lists
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import x.x.memlists.core.data.ListEntrySummary
 import x.x.memlists.core.theme.LocalAppThemePalette
 import x.x.memlists.core.ui.HeroCard
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
+import x.x.memlists.core.ui.ConfirmDeleteDialog
 import x.x.memlists.core.ui.UiTokens
 
 @Composable
@@ -41,9 +64,26 @@ fun ListDetailScreen(
     onNavigateBack: () -> Unit,
     onAddEntry: () -> Unit,
     onToggleChecked: (Long, Boolean) -> Unit,
-    onEditEntry: (Long) -> Unit
+    onEditEntry: (Long) -> Unit,
+    onDeleteEntry: (Long) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
+    var pendingDeleteEntry by remember { mutableStateOf<ListEntrySummary?>(null) }
+
+    pendingDeleteEntry?.let { target ->
+        ConfirmDeleteDialog(
+            title = lw("Delete item"),
+            itemName = target.name,
+            lw = lw,
+            onConfirm = {
+                val id = target.id
+                pendingDeleteEntry = null
+                onDeleteEntry(id)
+            },
+            onDismiss = { pendingDeleteEntry = null }
+        )
+    }
+
     ScreenScaffold(
         title = title,
         navigationButtonMode = NavigationButtonMode.Back,
@@ -55,7 +95,7 @@ fun ListDetailScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
             ) {
-                androidx.compose.material3.Icon(
+                Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = lw("New item")
                 )
@@ -110,11 +150,13 @@ fun ListDetailScreen(
                     }
                 } else {
                     items(uncheckedEntries, key = { it.id }) { entry ->
-                        ListEntryCard(
+                        SwipeableEntryRow(
                             entry = entry,
                             checked = false,
+                            lw = lw,
                             onToggleChecked = onToggleChecked,
-                            onEdit = { onEditEntry(entry.id) }
+                            onEdit = { onEditEntry(entry.id) },
+                            onRequestDelete = { pendingDeleteEntry = entry }
                         )
                     }
                 }
@@ -124,14 +166,102 @@ fun ListDetailScreen(
                         HorizontalDivider(color = palette.clText.copy(alpha = 0.4f), thickness = 2.dp)
                     }
                     items(checkedEntries, key = { it.id }) { entry ->
-                        ListEntryCard(
+                        SwipeableEntryRow(
                             entry = entry,
                             checked = true,
+                            lw = lw,
                             onToggleChecked = onToggleChecked,
-                            onEdit = { onEditEntry(entry.id) }
+                            onEdit = { onEditEntry(entry.id) },
+                            onRequestDelete = { pendingDeleteEntry = entry }
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+private fun SwipeableEntryRow(
+    entry: ListEntrySummary,
+    checked: Boolean,
+    lw: (String) -> String,
+    onToggleChecked: (Long, Boolean) -> Unit,
+    onEdit: () -> Unit,
+    onRequestDelete: () -> Unit
+) {
+    val palette = LocalAppThemePalette.current
+    @Suppress("DEPRECATION")
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> { onEdit(); false }
+                SwipeToDismissBoxValue.EndToStart -> { onRequestDelete(); false }
+                else -> true
+            }
+        }
+    )
+    var contextMenuExpanded by remember { mutableStateOf(false) }
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val isEdit = direction == SwipeToDismissBoxValue.StartToEnd
+            val isDelete = direction == SwipeToDismissBoxValue.EndToStart
+            val bgColor = when {
+                isEdit -> palette.clSel
+                isDelete -> Color.Red
+                else -> Color.Transparent
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(bgColor, UiTokens.shapeLarge)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = if (isEdit) Alignment.CenterStart else Alignment.CenterEnd
+            ) {
+                when {
+                    isEdit -> Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = lw("Edit"),
+                        tint = palette.clText
+                    )
+                    isDelete -> Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = lw("Delete"),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    ) {
+        Box(
+            modifier = Modifier.combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onEdit,
+                onLongClick = { contextMenuExpanded = true }
+            )
+        ) {
+            ListEntryCard(
+                entry = entry,
+                checked = checked,
+                onToggleChecked = onToggleChecked
+            )
+            DropdownMenu(
+                expanded = contextMenuExpanded,
+                onDismissRequest = { contextMenuExpanded = false },
+                offset = DpOffset(x = 120.dp, y = 0.dp)
+            ) {
+                DropdownMenuItem(
+                    text = { Text(lw("Edit"), fontSize = UiTokens.fsNormal, color = palette.clText) },
+                    onClick = { contextMenuExpanded = false; onEdit() }
+                )
+                DropdownMenuItem(
+                    text = { Text(lw("Delete"), fontSize = UiTokens.fsNormal, color = palette.clText) },
+                    onClick = { contextMenuExpanded = false; onRequestDelete() }
+                )
             }
         }
     }
@@ -141,14 +271,12 @@ fun ListDetailScreen(
 private fun ListEntryCard(
     entry: ListEntrySummary,
     checked: Boolean,
-    onToggleChecked: (Long, Boolean) -> Unit,
-    onEdit: () -> Unit
+    onToggleChecked: (Long, Boolean) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
     Card(
         shape = UiTokens.shapeLarge,
-        colors = CardDefaults.cardColors(containerColor = palette.clFill),
-        onClick = onEdit
+        colors = CardDefaults.cardColors(containerColor = palette.clFill)
     ) {
         Row(
             modifier = Modifier

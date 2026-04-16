@@ -49,20 +49,16 @@ fun ListEditorScreen(
     var comment by remember { mutableStateOf("") }
     var resolvedIsFolder by remember { mutableStateOf(isFolder) }
     var validationMessage by remember { mutableStateOf<String?>(null) }
-    var loaded by remember { mutableStateOf(!isEdit) }
 
-    if (isEdit) {
-        LaunchedEffect(listId) {
+    LaunchedEffect(listId) {
+        if (isEdit) {
             val row = application.repository.loadListById(listId)
             name = row.name
             comment = row.comment.orEmpty()
             resolvedIsFolder = row.isFolder
-            loaded = true
+        } else {
+            focusRequester.requestFocus()
         }
-    }
-
-    LaunchedEffect(loaded) {
-        if (loaded) focusRequester.requestFocus()
     }
 
     val title = when {
@@ -112,7 +108,6 @@ fun ListEditorScreen(
         }
     ) { paddingValues ->
         ScrollableScreen(paddingValues = paddingValues) {
-            if (!loaded) return@ScrollableScreen
             Card(
                 shape = UiTokens.shapeLarge,
                 colors = CardDefaults.cardColors(containerColor = palette.clFill)

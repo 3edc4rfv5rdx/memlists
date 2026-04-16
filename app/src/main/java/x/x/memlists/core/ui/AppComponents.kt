@@ -485,3 +485,53 @@ fun AboutDialog(
         }
     )
 }
+
+@Composable
+fun ConfirmDeleteDialog(
+    title: String,
+    itemName: String,
+    lw: (String) -> String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val palette = LocalAppThemePalette.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = palette.clMenu,
+        title = {
+            Text(
+                text = "$title?",
+                color = palette.clText,
+                fontSize = UiTokens.fsMedium,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                text = itemName,
+                color = palette.clText,
+                fontSize = UiTokens.fsNormal
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                shape = UiTokens.shapeMedium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Red,
+                    contentColor = Color.White
+                )
+            ) { Text(lw("Delete"), fontSize = UiTokens.fsNormal) }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                shape = UiTokens.shapeMedium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = palette.clUpBar,
+                    contentColor = palette.clText
+                )
+            ) { Text(lw("Cancel"), fontSize = UiTokens.fsNormal) }
+        }
+    )
+}
