@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="/home/e/PRJ/memlists"
 cd "$SCRIPT_DIR"
 
 PROJECT="memlists"
@@ -21,14 +21,25 @@ UPLOAD_TIMEOUT=180     # seconds per attempt
 UPLOAD_RETRY=2         # number of attempts
 
 echo "=== Detecting latest tag ==="
-TAG=$(git tag --list 'v*' | sort -V | tail -n 1)
-
-if [[ -z "$TAG" ]]; then
+mapfile -t TAGS < <(git tag --list 'v*' | sort -V)
+if (( ${#TAGS[@]} == 0 )); then
     echo "ERROR: No tags found."
     exit 1
 fi
 
+TAG="${TAGS[$(( ${#TAGS[@]} - 1 ))]}"
+if (( ${#TAGS[@]} > 1 )); then
+    PREV_TAG="${TAGS[$(( ${#TAGS[@]} - 2 ))]}"
+else
+    PREV_TAG=""
+fi
+
 echo "Tag: $TAG"
+if [[ -n "$PREV_TAG" ]]; then
+    echo "Prev: $PREV_TAG"
+else
+    echo "Prev: (none)"
+fi
 
 # ------------------------------------------------------------
 # Parse tag: v0.3.20260401+73  ->  VERSION=0.3.20260401  BUILD=73
@@ -49,34 +60,28 @@ APK_PREFIX="${PROJECT}-${VERSION}+${BUILD}-release"
 
 # ------------------------------------------------------------
 # Build changelog from CHANGELOG.md
-# Collect all sections between current tag and previous tag
+# Extract the notes under the latest tag section and stop at the
+# previous tag section. If there is no previous tag, stop at the next
+# top-level changelog header.
 # ------------------------------------------------------------
 echo "=== Building changelog from CHANGELOG.md ==="
 
-PREV_TAG=$(git tag --list 'v*' | sort -V | grep -B1 "^${TAG}$" | head -1)
-if [[ "$PREV_TAG" == "$TAG" ]]; then
-    PREV_TAG=""
+if ! grep -q "^## ${TAG}$" CHANGELOG.md; then
+    echo "ERROR: Changelog does not contain section for $TAG."
+    exit 1
 fi
 
-if [[ -n "$PREV_TAG" ]]; then
-    PREV_CLEAN="${PREV_TAG#v}"
-    PREV_VER="${PREV_CLEAN%%+*}"
-    PREV_BUILD="${PREV_CLEAN##*+}"
-    STOP_HEADER="## ${PREV_VER}+${PREV_BUILD}"
-    echo "Previous tag: $PREV_TAG (stop at: $STOP_HEADER)"
-else
-    STOP_HEADER=""
-    echo "No previous tag, collecting entire changelog."
-fi
-
-awk -v cur="## ${VERSION}+${BUILD}" -v stop="$STOP_HEADER" '
+awk -v cur="## ${TAG}" -v stop="${PREV_TAG:+## ${PREV_TAG}}" '
     $0 == cur { capture=1; next }
-    capture && /^## / {
-        if (stop == "" || $0 == stop) exit
-        print ""; print $0; next
-    }
+    capture && stop != "" && $0 == stop { exit }
+    capture && stop == "" && /^## / { exit }
     capture { print }
 ' CHANGELOG.md > "$CHANGELOG_FILE"
+
+if [[ ! -s "$CHANGELOG_FILE" ]]; then
+    echo "ERROR: No changelog notes found between $TAG and ${PREV_TAG:-end of file}."
+    exit 1
+fi
 
 echo "Generated changelog:"
 echo "--------------------------------------------------"

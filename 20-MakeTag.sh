@@ -28,6 +28,7 @@ if [[ -z "$version" || -z "$build" ]]; then
 fi
 
 TAG="v${version}+${build}"
+CHANGELOG_FILE="CHANGELOG.md"
 
 echo "Version: $version"
 echo "Build:   $build"
@@ -41,6 +42,46 @@ fi
 
 echo "=== Creating tag $TAG ==="
 git tag -a "$TAG" -m "Build $build"
+
+if [[ ! -f "$CHANGELOG_FILE" ]]; then
+    echo "ERROR: $CHANGELOG_FILE not found."
+    exit 1
+fi
+
+if grep -q "^## ${TAG}$" "$CHANGELOG_FILE"; then
+    echo "Changelog already has section for $TAG. Skipping update."
+else
+    echo "=== Inserting $TAG section right after Unreleased ==="
+    updated_changelog="$(mktemp /tmp/memlists-changelog-updated.XXXXXX.md)"
+
+    awk -v tag="$TAG" '
+        BEGIN { in_unreleased=0 }
+
+        /^## Unreleased$/ {
+            # Keep Unreleased at the top and add the new release section right after it.
+            print $0
+            print ""
+            print "## " tag
+            print ""
+            in_unreleased=1
+            next
+        }
+
+        in_unreleased && /^## / {
+            in_unreleased=0
+        }
+
+        { print }
+    ' "$CHANGELOG_FILE" > "$updated_changelog"
+
+    if ! grep -q "^## ${TAG}$" "$updated_changelog"; then
+        echo "ERROR: Failed to insert $TAG into changelog."
+        rm -f "$updated_changelog"
+        exit 1
+    fi
+
+    mv "$updated_changelog" "$CHANGELOG_FILE"
+fi
 
 echo "=== Done: tag $TAG created ==="
 
