@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+## v0.2.20260416+178
 - N Lists: edit list/folder and edit entry flows with save icon in app bar
 - N Lists: swipe right to edit, swipe left to delete, long-press context menu
 - N Lists: delete confirmation dialog via shared ConfirmDeleteDialog
