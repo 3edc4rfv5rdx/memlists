@@ -7,6 +7,7 @@
 - N Lists: photo count badge (icon + number) on list entries
 - N Lists: photo actions in long-press menu (add/view/remove)
 - E Lists: delete entry/list asks to move photos to gallery or delete permanently
+- E Memos: delete memo with photos asks to move to gallery or delete permanently
 - F Photo delete dialogs: all buttons use filled Button style per spec
 - F Lists: tap on photo badge opens viewer, tap on row no longer opens editor
 - F All dropdown menus use palette.clMenu for consistent theming

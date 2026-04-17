@@ -139,6 +139,8 @@ fun MemListsApp() {
             composable(Routes.Memos) {
                 val memosApplication = LocalContext.current.applicationContext as MemListsApplication
                 val memosScope = rememberCoroutineScope()
+                val memosContext = LocalContext.current
+                var pendingDeleteMemoId by remember { mutableStateOf<Long?>(null) }
                 val memosViewModel: MemosViewModel = viewModel()
                 val memosUiState by memosViewModel.uiState.collectAsState()
                 val todayReminderItems = remember { mutableStateOf(emptyList<x.x.memlists.core.data.MemoItemSummary>()) }
@@ -230,15 +232,21 @@ fun MemListsApp() {
                     },
                     onDeleteMemo = { item ->
                         memosScope.launch {
-                            withContext(Dispatchers.IO) {
-                                ReminderScheduler.cancelItem(memosApplication, item.id)
-                                memosApplication.repository.deleteMemo(item.id)
-                                memosApplication.photoRepository.deleteAllForOwner(
-                                    x.x.memlists.core.photo.PhotoOwnerType.Memo,
-                                    item.id
-                                )
+                            val hasPhotos = withContext(Dispatchers.IO) {
+                                memosApplication.photoRepository.count(
+                                    x.x.memlists.core.photo.PhotoOwnerType.Memo, item.id
+                                ) > 0
                             }
-                            memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                            if (hasPhotos) {
+                                pendingDeleteMemoId = item.id
+                            } else {
+                                executeDeleteMemo(
+                                    memosApplication, memosScope, memosContext, item.id,
+                                    moveToGallery = false
+                                ) {
+                                    memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                                }
+                            }
                         }
                     },
                     photoRepository = memosApplication.photoRepository,
@@ -246,6 +254,31 @@ fun MemListsApp() {
                         memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
                     }
                 )
+
+                pendingDeleteMemoId?.let { memoId ->
+                    x.x.memlists.core.photo.PhotoDeleteDialog(
+                        lw = lw,
+                        onMoveToGallery = {
+                            pendingDeleteMemoId = null
+                            executeDeleteMemo(
+                                memosApplication, memosScope, memosContext, memoId,
+                                moveToGallery = true
+                            ) {
+                                memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                            }
+                        },
+                        onDeletePermanently = {
+                            pendingDeleteMemoId = null
+                            executeDeleteMemo(
+                                memosApplication, memosScope, memosContext, memoId,
+                                moveToGallery = false
+                            ) {
+                                memosViewModel.refresh(newestFirst = uiState.settings.newestFirst)
+                            }
+                        },
+                        onDismiss = { pendingDeleteMemoId = null }
+                    )
+                }
             }
             composable(Routes.TagCloud) {
                 val tagCloudApp = LocalContext.current.applicationContext as MemListsApplication
@@ -656,4 +689,33 @@ private fun WelcomeRoute(
         onThemeSelected = viewModel::previewWelcomeTheme,
         onStart = viewModel::saveWelcomeSelection
     )
+}
+
+private fun executeDeleteMemo(
+    application: MemListsApplication,
+    scope: kotlinx.coroutines.CoroutineScope,
+    context: android.content.Context,
+    memoId: Long,
+    moveToGallery: Boolean,
+    onDone: () -> Unit
+) {
+    scope.launch {
+        withContext(Dispatchers.IO) {
+            if (moveToGallery) {
+                application.photoRepository.list(
+                    x.x.memlists.core.photo.PhotoOwnerType.Memo, memoId
+                ).forEach { ref ->
+                    x.x.memlists.core.photo.PhotoStorage.saveToDeviceGallery(
+                        context, java.io.File(ref.path)
+                    )
+                }
+            }
+            ReminderScheduler.cancelItem(application, memoId)
+            application.repository.deleteMemo(memoId)
+            application.photoRepository.deleteAllForOwner(
+                x.x.memlists.core.photo.PhotoOwnerType.Memo, memoId
+            )
+        }
+        onDone()
+    }
 }
