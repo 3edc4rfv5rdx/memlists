@@ -135,10 +135,6 @@ class AppViewModel(
         }
     }
 
-    fun updateAutoSortDictionary(enabled: Boolean) {
-        persistSettings(uiState.value.settings.copy(autoSortDictionary = enabled, isFirstLaunch = false))
-    }
-
     fun updateLargeFontWakeLock(enabled: Boolean) {
         persistSettings(uiState.value.settings.copy(largeFontWakeLock = enabled, isFirstLaunch = false))
     }

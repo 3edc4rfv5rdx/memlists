@@ -188,7 +188,6 @@ Key-value table (`settings`) in the single shared database:
 | Default sound | null | Default reminder sound |
 | Sound repeats | "10" | Fullscreen alert sound repetitions |
 | hiddpin | text | PIN for hidden mode |
-| auto_sort_dict | "true" | Auto-sort lists dictionary |
 | large_font_wakelock | "true" | Keep screen on in large font mode |
 
 ### ✅ 2.3 Photos Table
@@ -428,7 +427,6 @@ Three reminder types (reminder_type 1/2/3), unified scheduling via platform noti
 - Restore from backup button.
 - Export to CSV button.
 - Items Dictionary link (opens Lists dictionary).
-- Auto-sort dictionary toggle.
 - Keep screen on toggle (for Lists large font mode).
 
 ---
@@ -591,18 +589,15 @@ Options dialog: unchecked only / all items, include comment yes/no.
 - Duplicate detection: skips items already in destination (by dict_id for dictionary items, by name+quantity+unit for manual entries).
 - Reports count of moved/copied + skipped duplicates.
 
-### 3.7 Items Dictionary Screen
+### ✅ 3.7 Items Dictionary Screen
 
 - Full list of dictionary items, format: "Item Name /unit" (unit shown only if set).
+- Always sorted alphabetically (case-insensitive).
 - Search (real-time, case-insensitive).
 - Add: name (auto-capitalized first letter) + optional unit.
-- Edit: name + unit.
-- Delete: detaches from all lists (linked entries become manual with name/unit copied).
-- Reorder: drag handles (disabled during search).
-- Sort alphabetically button.
+- Edit and Delete via context menu (tap row).
+- Delete: removes from dictionary; existing list entries keep their copied name/unit.
 - Duplicate prevention (case-insensitive).
-- Auto-sort on add (if setting enabled).
-- Swipe right → edit, swipe left → delete.
 
 ### 3.8 Photos (Lists Module)
 

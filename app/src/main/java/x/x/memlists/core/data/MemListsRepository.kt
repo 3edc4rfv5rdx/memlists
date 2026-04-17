@@ -37,7 +37,6 @@ class MemListsRepository(
             defaultSound = values[KEY_DEFAULT_SOUND],
             soundRepeats = values[KEY_SOUND_REPEATS]?.toIntOrNull() ?: 10,
             hiddenPin = values[KEY_HIDDEN_PIN],
-            autoSortDictionary = values[KEY_AUTO_SORT_DICT].asBoolean(default = true),
             largeFontWakeLock = values[KEY_LARGE_FONT_WAKELOCK].asBoolean(default = true),
             isFirstLaunch = !(hasLanguage && hasTheme),
             timeMorning = values[KEY_TIME_MORNING] ?: "09:30",
@@ -58,7 +57,6 @@ class MemListsRepository(
                 putOptionalSetting(KEY_DEFAULT_SOUND, settings.defaultSound)
                 putSetting(KEY_SOUND_REPEATS, settings.soundRepeats.toString())
                 putOptionalSetting(KEY_HIDDEN_PIN, settings.hiddenPin)
-                putSetting(KEY_AUTO_SORT_DICT, settings.autoSortDictionary.toString())
                 putSetting(KEY_LARGE_FONT_WAKELOCK, settings.largeFontWakeLock.toString())
                 putSetting(KEY_TIME_MORNING, settings.timeMorning)
                 putSetting(KEY_TIME_DAY, settings.timeDay)
@@ -615,6 +613,48 @@ class MemListsRepository(
         }
     }
 
+    suspend fun loadDictionaryAll(query: String = ""): List<DictionaryItem> = withContext(Dispatchers.IO) {
+        val result = mutableListOf<DictionaryItem>()
+        val trimmed = query.trim()
+        val (selection, args) = if (trimmed.isEmpty()) {
+            null to null
+        } else {
+            val pattern = "%${trimmed.replace("%", "\\%").replace("_", "\\_")}%"
+            "name LIKE ? ESCAPE '\\'" to arrayOf(pattern)
+        }
+        databaseHelper.readableDatabase.query(
+            "dictionary",
+            arrayOf("id", "name", "unit"),
+            selection, args, null, null,
+            "name COLLATE NOCASE ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result += DictionaryItem(
+                    id = cursor.getLong(0),
+                    name = cursor.getString(1),
+                    unit = cursor.getStringOrNull(2)
+                )
+            }
+        }
+        result
+    }
+
+    suspend fun updateDictionary(id: Long, name: String, unit: String?) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            put("name", name)
+            if (unit.isNullOrBlank()) putNull("unit") else put("unit", unit)
+        }
+        databaseHelper.writableDatabase.update(
+            "dictionary", values, "id = ?", arrayOf(id.toString())
+        )
+    }
+
+    suspend fun deleteDictionary(id: Long) = withContext(Dispatchers.IO) {
+        databaseHelper.writableDatabase.delete(
+            "dictionary", "id = ?", arrayOf(id.toString())
+        )
+    }
+
     suspend fun insertDictionary(name: String, unit: String?): Long = withContext(Dispatchers.IO) {
         val sortOrder = databaseHelper.readableDatabase.compileStatement(
             "SELECT COALESCE(MAX(sort_order), 0) FROM dictionary"
@@ -1116,7 +1156,6 @@ class MemListsRepository(
         private const val KEY_DEFAULT_SOUND = "Default sound"
         private const val KEY_SOUND_REPEATS = "Sound repeats"
         private const val KEY_HIDDEN_PIN = "hiddpin"
-        private const val KEY_AUTO_SORT_DICT = "auto_sort_dict"
         private const val KEY_LARGE_FONT_WAKELOCK = "large_font_wakelock"
         private const val KEY_TIME_MORNING = "time_morning"
         private const val KEY_TIME_DAY = "time_day"

@@ -81,7 +81,10 @@ import x.x.memlists.core.ui.ConfirmDeleteDialog
 import x.x.memlists.core.ui.HeroCard
 import x.x.memlists.core.ui.NavigationButtonMode
 import x.x.memlists.core.ui.ScreenScaffold
+import x.x.memlists.core.ui.SnackbarTone
 import x.x.memlists.core.ui.UiTokens
+import x.x.memlists.core.ui.showThemedSnackbar
+import androidx.compose.material3.SnackbarHostState
 import java.io.File
 
 @Composable
@@ -105,6 +108,7 @@ fun ListDetailScreen(
     val palette = LocalAppThemePalette.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var pendingDeleteEntry by remember { mutableStateOf<ListEntrySummary?>(null) }
 
@@ -214,6 +218,7 @@ fun ListDetailScreen(
         title = title,
         navigationButtonMode = NavigationButtonMode.Back,
         onNavigateBack = onNavigateBack,
+        snackbarHostState = snackbarHostState,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddEntry,
@@ -303,7 +308,14 @@ fun ListDetailScreen(
                                     { removeAllEntryId = entry.id }
                                 } else null,
                                 onAddToDictionary = if (!entry.isInDictionary) {
-                                    { onAddToDictionary(entry.id) }
+                                    {
+                                        onAddToDictionary(entry.id)
+                                        scope.launch {
+                                            snackbarHostState.showThemedSnackbar(
+                                                lw("Added"), SnackbarTone.Success
+                                            )
+                                        }
+                                    }
                                 } else null
                             )
                         }

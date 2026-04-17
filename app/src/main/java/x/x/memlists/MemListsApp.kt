@@ -23,6 +23,7 @@ import x.x.memlists.app.AppViewModel
 import x.x.memlists.core.reminder.ReminderScheduler
 import x.x.memlists.core.theme.MemListsTheme
 import x.x.memlists.core.ui.LoadingScreen
+import x.x.memlists.feature.lists.DictionaryEditorScreen
 import x.x.memlists.feature.lists.ListsHomeScreen
 import x.x.memlists.feature.lists.ListsViewModel
 import x.x.memlists.feature.lists.ListDetailScreen
@@ -51,6 +52,7 @@ private object Routes {
     const val EntryEdit = "entry_edit/{listId}/{entryId}"
     const val TagCloud = "tag_cloud"
     const val UserFilters = "user_filters"
+    const val Dictionary = "dictionary"
 }
 
 private fun listNewRoute(parentId: Long?, isFolder: Boolean): String {
@@ -627,6 +629,12 @@ fun MemListsApp() {
                     entryId = editEntryId
                 )
             }
+            composable(Routes.Dictionary) {
+                DictionaryEditorScreen(
+                    lw = lw,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
             composable(Routes.Settings) {
                 SettingsScreen(
                     settings = uiState.settings,
@@ -638,8 +646,8 @@ fun MemListsApp() {
                     onThemeChanged = viewModel::updateTheme,
                     onNewestFirstChanged = viewModel::updateNewestFirst,
                     onRemindersEnabledChanged = viewModel::updateRemindersEnabled,
-                    onAutoSortDictionaryChanged = viewModel::updateAutoSortDictionary,
                     onLargeFontWakeLockChanged = viewModel::updateLargeFontWakeLock,
+                    onOpenDictionary = { navController.navigate(Routes.Dictionary) },
                     onTimeMorningChanged = viewModel::updateTimeMorning,
                     onTimeDayChanged = viewModel::updateTimeDay,
                     onTimeEveningChanged = viewModel::updateTimeEvening,

@@ -9,7 +9,6 @@ data class SettingsData(
     val defaultSound: String? = null,
     val soundRepeats: Int = 10,
     val hiddenPin: String? = null,
-    val autoSortDictionary: Boolean = true,
     val largeFontWakeLock: Boolean = true,
     val isFirstLaunch: Boolean = true,
     val timeMorning: String = "09:30",

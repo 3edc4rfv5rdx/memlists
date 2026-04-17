@@ -91,8 +91,8 @@ fun SettingsScreen(
     onThemeChanged: (String) -> Unit,
     onNewestFirstChanged: (Boolean) -> Unit,
     onRemindersEnabledChanged: (Boolean) -> Unit,
-    onAutoSortDictionaryChanged: (Boolean) -> Unit,
     onLargeFontWakeLockChanged: (Boolean) -> Unit,
+    onOpenDictionary: () -> Unit,
     onTimeMorningChanged: (String) -> Unit,
     onTimeDayChanged: (String) -> Unit,
     onTimeEveningChanged: (String) -> Unit,
@@ -191,16 +191,15 @@ fun SettingsScreen(
                 onCheckedChange = onRemindersEnabledChanged
             )
             SettingSwitchCard(
-                title = lw("Auto-sort dictionary"),
-                body = lw("Items dictionary"),
-                checked = settings.autoSortDictionary,
-                onCheckedChange = onAutoSortDictionaryChanged
-            )
-            SettingSwitchCard(
                 title = lw("Keep screen on"),
                 body = lw("Theme applied immediately"),
                 checked = settings.largeFontWakeLock,
                 onCheckedChange = onLargeFontWakeLockChanged
+            )
+            ActionRowCard(
+                label = lw("Items dictionary"),
+                palette = palette,
+                onClick = onOpenDictionary
             )
 
             SectionTitle(title = lw("Time presets"))

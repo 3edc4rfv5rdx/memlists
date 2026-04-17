@@ -3,6 +3,12 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Lists: green snackbar on add to dictionary (editor + entry button)
+- E Lists: red snackbar on dictionary save/delete failure
+- F Dictionary edit dialog: 30% scrim so snackbar is visible behind
+- N Lists: dictionary editor screen (search, add, edit, delete via context menu)
+- F Settings: replace auto-sort dictionary toggle with link to dictionary editor
+- F Dictionary always sorted alphabetically (case-insensitive)
 - N Lists: drag-handle reorder for unchecked entries (sort_order persisted)
 - N Lists: per-entry "Add to dictionary" button shown when name not in dictionary
 - N Lists: live dictionary search dropdown in entry editor name field
