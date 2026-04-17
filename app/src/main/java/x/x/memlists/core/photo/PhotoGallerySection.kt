@@ -33,7 +33,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -211,34 +211,8 @@ fun PhotoGallerySection(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showSourceMenu = false }) {
-                    Text(lw("Cancel"), color = palette.clText)
-                }
-            }
-        )
-    }
-
-    pendingDelete?.let { entry ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            containerColor = palette.clMenu,
-            title = { Text(lw("Delete photo?"), color = palette.clText) },
-            confirmButton = {
                 Button(
-                    onClick = {
-                        scope.launch { state.delete(entry) }
-                        pendingDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.clUpBar,
-                        contentColor = palette.clText
-                    ),
-                    shape = UiTokens.shapeMedium
-                ) { Text(lw("Delete")) }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { pendingDelete = null },
+                    onClick = { showSourceMenu = false },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = palette.clUpBar,
                         contentColor = palette.clText
@@ -249,6 +223,22 @@ fun PhotoGallerySection(
         )
     }
 
+    pendingDelete?.let { entry ->
+        PhotoDeleteDialog(
+            lw = lw,
+            onMoveToGallery = {
+                PhotoStorage.saveToDeviceGallery(context, java.io.File(entry.path))
+                scope.launch { state.delete(entry) }
+                pendingDelete = null
+            },
+            onDeletePermanently = {
+                scope.launch { state.delete(entry) }
+                pendingDelete = null
+            },
+            onDismiss = { pendingDelete = null }
+        )
+    }
+
     limitMessage?.let { msg ->
         AlertDialog(
             onDismissRequest = { limitMessage = null },
@@ -256,9 +246,14 @@ fun PhotoGallerySection(
             title = { Text(lw("Photos"), color = palette.clText) },
             text = { Text(msg, color = palette.clText) },
             confirmButton = {
-                TextButton(onClick = { limitMessage = null }) {
-                    Text("OK", color = palette.clText)
-                }
+                Button(
+                    onClick = { limitMessage = null },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text("OK") }
             }
         )
     }

@@ -44,7 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -357,9 +357,14 @@ fun ListDetailScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showSourceMenu = false; addPhotoEntryId = null }) {
-                    Text(lw("Cancel"), color = palette.clText)
-                }
+                Button(
+                    onClick = { showSourceMenu = false; addPhotoEntryId = null },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text(lw("Cancel")) }
             }
         )
     }
@@ -372,45 +377,30 @@ fun ListDetailScreen(
             title = { Text(lw("Photos"), color = palette.clText) },
             text = { Text(msg, color = palette.clText) },
             confirmButton = {
-                TextButton(onClick = { limitMessage = null }) {
-                    Text("OK", color = palette.clText)
-                }
+                Button(
+                    onClick = { limitMessage = null },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium
+                ) { Text("OK") }
             }
         )
     }
 
     // Remove all photos confirmation
     removeAllEntryId?.let { entryId ->
-        AlertDialog(
-            onDismissRequest = { removeAllEntryId = null },
-            containerColor = palette.clMenu,
-            title = { Text(lw("Remove all photos?"), color = palette.clText) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        removeAllEntryId = null
-                        scope.launch {
-                            photoRepository.deleteAllForOwner(PhotoOwnerType.Entry, entryId)
-                            onPhotosChanged()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.clUpBar,
-                        contentColor = palette.clText
-                    ),
-                    shape = UiTokens.shapeMedium
-                ) { Text(lw("Delete")) }
+        RemoveAllPhotosDialog(
+            lw = lw,
+            photoRepository = photoRepository,
+            entryId = entryId,
+            context = context,
+            onDone = {
+                removeAllEntryId = null
+                onPhotosChanged()
             },
-            dismissButton = {
-                Button(
-                    onClick = { removeAllEntryId = null },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.clUpBar,
-                        contentColor = palette.clText
-                    ),
-                    shape = UiTokens.shapeMedium
-                ) { Text(lw("Cancel")) }
-            }
+            onDismiss = { removeAllEntryId = null }
         )
     }
 
@@ -623,4 +613,68 @@ private fun ListEntryCard(
             }
         }
     }
+}
+
+@Composable
+private fun RemoveAllPhotosDialog(
+    lw: (String) -> String,
+    photoRepository: PhotoRepository,
+    entryId: Long,
+    context: android.content.Context,
+    onDone: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val palette = LocalAppThemePalette.current
+    val scope = rememberCoroutineScope()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = palette.clMenu,
+        title = { Text(lw("Remove all photos?"), color = palette.clText) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            val photos = photoRepository.list(PhotoOwnerType.Entry, entryId)
+                            photos.forEach { ref ->
+                                PhotoStorage.saveToDeviceGallery(context, java.io.File(ref.path))
+                            }
+                            photoRepository.deleteAllForOwner(PhotoOwnerType.Entry, entryId)
+                            onDone()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(lw("Move to device gallery")) }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            photoRepository.deleteAllForOwner(PhotoOwnerType.Entry, entryId)
+                            onDone()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = palette.clUpBar,
+                        contentColor = palette.clText
+                    ),
+                    shape = UiTokens.shapeMedium,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(lw("Delete permanently")) }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = palette.clUpBar,
+                    contentColor = palette.clText
+                ),
+                shape = UiTokens.shapeMedium
+            ) { Text(lw("Cancel")) }
+        }
+    )
 }

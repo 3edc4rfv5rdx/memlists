@@ -1,7 +1,11 @@
 package x.x.memlists.core.photo
 
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -53,6 +57,35 @@ object PhotoStorage {
             src.renameTo(dest) || src.copyAndDelete(dest)
         }
         return dest.absolutePath
+    }
+
+    fun saveToDeviceGallery(context: Context, file: File): Boolean {
+        if (!file.exists()) return false
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, file.name)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Memlists")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+        }
+        val uri = context.contentResolver.insert(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values
+        ) ?: return false
+        return try {
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                file.inputStream().use { input -> input.copyTo(output) }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                values.clear()
+                values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                context.contentResolver.update(uri, values, null, null)
+            }
+            true
+        } catch (_: Exception) {
+            context.contentResolver.delete(uri, null, null)
+            false
+        }
     }
 
     private fun File.copyAndDelete(dest: File): Boolean {

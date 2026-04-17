@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -351,6 +352,34 @@ fun MemListsApp() {
 
                 val listsApplication = LocalContext.current.applicationContext as MemListsApplication
                 val listsScope = rememberCoroutineScope()
+                val listsContext = LocalContext.current
+                var pendingDeleteListId by remember { mutableStateOf<Long?>(null) }
+
+                fun executeDeleteList(listId: Long, moveToGallery: Boolean) {
+                    listsScope.launch {
+                        withContext(Dispatchers.IO) {
+                            val entryIds = listsApplication.repository.listEntryIds(listId)
+                            if (moveToGallery) {
+                                entryIds.forEach { entryId ->
+                                    listsApplication.photoRepository.list(
+                                        x.x.memlists.core.photo.PhotoOwnerType.Entry, entryId
+                                    ).forEach { ref ->
+                                        x.x.memlists.core.photo.PhotoStorage.saveToDeviceGallery(
+                                            listsContext, java.io.File(ref.path)
+                                        )
+                                    }
+                                }
+                            }
+                            entryIds.forEach { entryId ->
+                                listsApplication.photoRepository.deleteAllForOwnerSync(
+                                    x.x.memlists.core.photo.PhotoOwnerType.Entry, entryId
+                                )
+                            }
+                            listsApplication.repository.deleteList(listId)
+                        }
+                        listsViewModel.refresh()
+                    }
+                }
 
                 ListsHomeScreen(
                     currentFolderName = listsUiState.currentFolderName,
@@ -372,19 +401,36 @@ fun MemListsApp() {
                     onEditList = { listId -> navController.navigate(listEditRoute(listId)) { launchSingleTop = true } },
                     onDeleteList = { listId ->
                         listsScope.launch {
-                            withContext(Dispatchers.IO) {
-                                listsApplication.repository.listEntryIds(listId).forEach { entryId ->
-                                    listsApplication.photoRepository.deleteAllForOwnerSync(
-                                        x.x.memlists.core.photo.PhotoOwnerType.Entry,
-                                        entryId
-                                    )
+                            val hasPhotos = withContext(Dispatchers.IO) {
+                                listsApplication.repository.listEntryIds(listId).any { entryId ->
+                                    listsApplication.photoRepository.count(
+                                        x.x.memlists.core.photo.PhotoOwnerType.Entry, entryId
+                                    ) > 0
                                 }
-                                listsApplication.repository.deleteList(listId)
                             }
-                            listsViewModel.refresh()
+                            if (hasPhotos) {
+                                pendingDeleteListId = listId
+                            } else {
+                                executeDeleteList(listId, moveToGallery = false)
+                            }
                         }
                     }
                 )
+
+                pendingDeleteListId?.let { listId ->
+                    x.x.memlists.core.photo.PhotoDeleteDialog(
+                        lw = lw,
+                        onMoveToGallery = {
+                            pendingDeleteListId = null
+                            executeDeleteList(listId, moveToGallery = true)
+                        },
+                        onDeletePermanently = {
+                            pendingDeleteListId = null
+                            executeDeleteList(listId, moveToGallery = false)
+                        },
+                        onDismiss = { pendingDeleteListId = null }
+                    )
+                }
             }
             composable(Routes.ListNew) { backStackEntry ->
                 val application = LocalContext.current.applicationContext as MemListsApplication
@@ -446,6 +492,29 @@ fun MemListsApp() {
 
                 val detailApplication = LocalContext.current.applicationContext as MemListsApplication
                 val detailScope = rememberCoroutineScope()
+                val detailContext = LocalContext.current
+                var pendingDeleteEntryId by remember { mutableStateOf<Long?>(null) }
+
+                fun executeDeleteEntry(entryId: Long, moveToGallery: Boolean) {
+                    detailScope.launch {
+                        withContext(Dispatchers.IO) {
+                            if (moveToGallery) {
+                                detailApplication.photoRepository.list(
+                                    x.x.memlists.core.photo.PhotoOwnerType.Entry, entryId
+                                ).forEach { ref ->
+                                    x.x.memlists.core.photo.PhotoStorage.saveToDeviceGallery(
+                                        detailContext, java.io.File(ref.path)
+                                    )
+                                }
+                            }
+                            detailApplication.repository.deleteListEntry(entryId)
+                            detailApplication.photoRepository.deleteAllForOwner(
+                                x.x.memlists.core.photo.PhotoOwnerType.Entry, entryId
+                            )
+                        }
+                        detailViewModel.load(listId)
+                    }
+                }
 
                 ListDetailScreen(
                     title = detailUiState.title,
@@ -461,18 +530,35 @@ fun MemListsApp() {
                     onEditEntry = { entryId -> navController.navigate(entryEditRoute(listId, entryId)) { launchSingleTop = true } },
                     onDeleteEntry = { entryId ->
                         detailScope.launch {
-                            withContext(Dispatchers.IO) {
-                                detailApplication.repository.deleteListEntry(entryId)
-                                detailApplication.photoRepository.deleteAllForOwner(
-                                    x.x.memlists.core.photo.PhotoOwnerType.Entry,
-                                    entryId
-                                )
+                            val hasPhotos = withContext(Dispatchers.IO) {
+                                detailApplication.photoRepository.count(
+                                    x.x.memlists.core.photo.PhotoOwnerType.Entry, entryId
+                                ) > 0
                             }
-                            detailViewModel.load(listId)
+                            if (hasPhotos) {
+                                pendingDeleteEntryId = entryId
+                            } else {
+                                executeDeleteEntry(entryId, moveToGallery = false)
+                            }
                         }
                     },
                     onPhotosChanged = { detailViewModel.load(listId) }
                 )
+
+                pendingDeleteEntryId?.let { entryId ->
+                    x.x.memlists.core.photo.PhotoDeleteDialog(
+                        lw = lw,
+                        onMoveToGallery = {
+                            pendingDeleteEntryId = null
+                            executeDeleteEntry(entryId, moveToGallery = true)
+                        },
+                        onDeletePermanently = {
+                            pendingDeleteEntryId = null
+                            executeDeleteEntry(entryId, moveToGallery = false)
+                        },
+                        onDismiss = { pendingDeleteEntryId = null }
+                    )
+                }
             }
             composable(Routes.EntryNew) { backStackEntry ->
                 val application = LocalContext.current.applicationContext as MemListsApplication

@@ -118,34 +118,20 @@ fun PhotoViewerOverlay(
 
     if (confirmDelete) {
         val palette = LocalAppThemePalette.current
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            containerColor = palette.clMenu,
-            title = { Text(lw("Delete photo?"), color = palette.clText) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        confirmDelete = false
-                        val entry = entries.getOrNull(pagerState.currentPage) ?: return@Button
-                        scope.launch { onDelete(entry) }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.clUpBar,
-                        contentColor = palette.clText
-                    ),
-                    shape = UiTokens.shapeMedium
-                ) { Text(lw("Delete")) }
+        PhotoDeleteDialog(
+            lw = lw,
+            onMoveToGallery = {
+                confirmDelete = false
+                val entry = entries.getOrNull(pagerState.currentPage) ?: return@PhotoDeleteDialog
+                PhotoStorage.saveToDeviceGallery(context, File(entry.path))
+                scope.launch { onDelete(entry) }
             },
-            dismissButton = {
-                Button(
-                    onClick = { confirmDelete = false },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = palette.clUpBar,
-                        contentColor = palette.clText
-                    ),
-                    shape = UiTokens.shapeMedium
-                ) { Text(lw("Cancel")) }
-            }
+            onDeletePermanently = {
+                confirmDelete = false
+                val entry = entries.getOrNull(pagerState.currentPage) ?: return@PhotoDeleteDialog
+                scope.launch { onDelete(entry) }
+            },
+            onDismiss = { confirmDelete = false }
         )
     }
 }
