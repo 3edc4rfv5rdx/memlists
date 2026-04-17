@@ -181,7 +181,8 @@ fun SettingsScreen(
             ActionRowCard(
                 label = lw("Items dictionary"),
                 palette = palette,
-                onClick = onOpenDictionary
+                onClick = onOpenDictionary,
+                showChevron = true
             )
 
             SettingSwitchCard(
@@ -198,7 +199,7 @@ fun SettingsScreen(
             )
             SettingSwitchCard(
                 title = lw("Keep screen on"),
-                body = lw("Theme applied immediately"),
+                body = lw("In large font mode"),
                 checked = settings.largeFontWakeLock,
                 onCheckedChange = onLargeFontWakeLockChanged
             )
@@ -401,7 +402,8 @@ fun SettingsScreen(
 private fun ActionRowCard(
     label: String,
     palette: AppThemePalette,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    showChevron: Boolean = false
 ) {
     Card(
         shape = UiTokens.shapeLarge,
@@ -422,11 +424,13 @@ private fun ActionRowCard(
                 fontSize = UiTokens.fsNormal,
                 color = palette.clText
             )
-            Text(
-                text = ">",
-                fontSize = UiTokens.fsNormal,
-                color = palette.clText
-            )
+            if (showChevron) {
+                Text(
+                    text = ">",
+                    fontSize = UiTokens.fsNormal,
+                    color = palette.clText
+                )
+            }
         }
     }
 }
