@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+## v0.2.20260417+198
 - F Settings: ">" chevron only on Items dictionary row, not on Backup/Restore/CSV
 - F Settings: rename "Time presets" → "Установки времени" (ru/ua only)
 - F Settings: replace nonsensical "Theme applied immediately" with "In large font mode" body for Keep screen on
