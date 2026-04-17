@@ -158,6 +158,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.reorderable)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 

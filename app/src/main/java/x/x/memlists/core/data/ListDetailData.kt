@@ -8,7 +8,8 @@ data class ListEntrySummary(
     val unit: String?,
     val isChecked: Boolean,
     val sortOrder: Int,
-    val photoCount: Int
+    val photoCount: Int,
+    val isInDictionary: Boolean = false
 )
 
 data class ListDetailData(
@@ -17,5 +18,11 @@ data class ListDetailData(
     val comment: String?,
     val uncheckedEntries: List<ListEntrySummary>,
     val checkedEntries: List<ListEntrySummary>
+)
+
+data class DictionaryItem(
+    val id: Long,
+    val name: String,
+    val unit: String?
 )
 

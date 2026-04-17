@@ -1,13 +1,16 @@
 package x.x.memlists.feature.lists
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -27,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import x.x.memlists.MemListsApplication
+import x.x.memlists.core.data.DictionaryItem
 import x.x.memlists.core.photo.PhotoGallerySection
 import x.x.memlists.core.photo.PhotoOwnerType
 import x.x.memlists.core.photo.PhotoViewerOverlay
@@ -57,6 +61,15 @@ fun ListEntryEditorScreen(
     var name by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf<List<DictionaryItem>>(emptyList()) }
+
+    LaunchedEffect(name) {
+        val query = name.trim()
+        suggestions = if (query.isEmpty()) emptyList()
+        else application.repository.searchDictionary(query).filter {
+            !it.name.equals(query, ignoreCase = true)
+        }
+    }
 
     val photoGalleryState = rememberPhotoGalleryState(
         context = context,
@@ -144,6 +157,44 @@ fun ListEntryEditorScreen(
                         singleLine = true,
                         label = { Text(lw("Name")) }
                     )
+                    if (suggestions.isNotEmpty()) {
+                        Card(
+                            shape = UiTokens.shapeMedium,
+                            colors = CardDefaults.cardColors(containerColor = palette.clMenu)
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                suggestions.forEachIndexed { index, item ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                name = item.name
+                                                if (unit.isBlank()) unit = item.unit.orEmpty()
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = item.name,
+                                            color = palette.clText,
+                                            fontSize = UiTokens.fsNormal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        item.unit?.takeIf { it.isNotBlank() }?.let {
+                                            Text(
+                                                text = it,
+                                                color = palette.clText.copy(alpha = 0.7f),
+                                                fontSize = UiTokens.fsNormal
+                                            )
+                                        }
+                                    }
+                                    if (index < suggestions.lastIndex) {
+                                        HorizontalDivider(color = palette.clText.copy(alpha = 0.15f))
+                                    }
+                                }
+                            }
+                        }
+                    }
                     OutlinedTextField(
                         value = quantity,
                         onValueChange = { quantity = it },

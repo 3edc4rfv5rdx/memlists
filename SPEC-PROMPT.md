@@ -42,7 +42,6 @@ This spec was reviewed against the current codebase.
 - No move into folder / remove from folder actions
 - No edit flow for existing lists from the reviewed navigation
 - No edit flow for existing list entries from the reviewed navigation
-- No drag-reorder for unchecked entries
 - No top-right menu with move/share/comment/delete-done/clear-done actions
 - No large-font mode flow
 - No list-entry photo flow in the reviewed UI
@@ -528,6 +527,7 @@ Three reminder types (reminder_type 1/2/3), unified scheduling via platform noti
 - Tap checkbox → toggle checked status.
 - Swipe right → edit, swipe left → delete.
 - Drag handle → reorder (unchecked only).
+- "Add to dictionary" button on unchecked items whose name is not yet in the dictionary. On tap, the name is normalized to `Xxxxx` (first letter upper, rest lower) and inserted into dictionary with its current unit.
 
 **Add Item dialog:**
 - Name field with real-time dictionary search (case-insensitive, max 20 results).

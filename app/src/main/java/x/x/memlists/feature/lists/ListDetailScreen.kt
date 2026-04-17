@@ -19,9 +19,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -41,6 +44,7 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -63,6 +67,8 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import x.x.memlists.core.data.ListEntrySummary
 import x.x.memlists.core.photo.MAX_PHOTOS_PER_OWNER
 import x.x.memlists.core.photo.PhotoEntry
@@ -92,7 +98,9 @@ fun ListDetailScreen(
     onToggleChecked: (Long, Boolean) -> Unit,
     onEditEntry: (Long) -> Unit,
     onDeleteEntry: (Long) -> Unit,
-    onPhotosChanged: () -> Unit
+    onPhotosChanged: () -> Unit,
+    onReorderEntries: (Int, Int) -> Unit,
+    onAddToDictionary: (Long) -> Unit
 ) {
     val palette = LocalAppThemePalette.current
     val context = LocalContext.current
@@ -220,7 +228,17 @@ fun ListDetailScreen(
             }
         }
     ) { paddingValues ->
+        val lazyListState = rememberLazyListState()
+        val headerCount = remember(comment) { if (!comment.isNullOrBlank()) 1 else 0 }
+        val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+            val fromIndex = from.index - headerCount
+            val toIndex = to.index - headerCount
+            if (fromIndex in uncheckedEntries.indices && toIndex in uncheckedEntries.indices) {
+                onReorderEntries(fromIndex, toIndex)
+            }
+        }
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(paddingValues)
@@ -268,21 +286,27 @@ fun ListDetailScreen(
                     }
                 } else {
                     items(uncheckedEntries, key = { it.id }) { entry ->
-                        SwipeableEntryRow(
-                            entry = entry,
-                            checked = false,
-                            lw = lw,
-                            onToggleChecked = onToggleChecked,
-                            onEdit = { onEditEntry(entry.id) },
-                            onRequestDelete = { pendingDeleteEntry = entry },
-                            onAddPhoto = { requestAddPhoto(entry.id, entry.photoCount) },
-                            onViewPhotos = if (entry.photoCount > 0) {
-                                { openViewer(entry.id) }
-                            } else null,
-                            onRemovePhotos = if (entry.photoCount > 0) {
-                                { removeAllEntryId = entry.id }
-                            } else null
-                        )
+                        ReorderableItem(reorderableState, key = entry.id) { _ ->
+                            SwipeableEntryRow(
+                                entry = entry,
+                                checked = false,
+                                dragHandleModifier = Modifier.draggableHandle(),
+                                lw = lw,
+                                onToggleChecked = onToggleChecked,
+                                onEdit = { onEditEntry(entry.id) },
+                                onRequestDelete = { pendingDeleteEntry = entry },
+                                onAddPhoto = { requestAddPhoto(entry.id, entry.photoCount) },
+                                onViewPhotos = if (entry.photoCount > 0) {
+                                    { openViewer(entry.id) }
+                                } else null,
+                                onRemovePhotos = if (entry.photoCount > 0) {
+                                    { removeAllEntryId = entry.id }
+                                } else null,
+                                onAddToDictionary = if (!entry.isInDictionary) {
+                                    { onAddToDictionary(entry.id) }
+                                } else null
+                            )
+                        }
                     }
                 }
 
@@ -294,6 +318,7 @@ fun ListDetailScreen(
                         SwipeableEntryRow(
                             entry = entry,
                             checked = true,
+                            dragHandleModifier = null,
                             lw = lw,
                             onToggleChecked = onToggleChecked,
                             onEdit = { onEditEntry(entry.id) },
@@ -304,7 +329,8 @@ fun ListDetailScreen(
                             } else null,
                             onRemovePhotos = if (entry.photoCount > 0) {
                                 { removeAllEntryId = entry.id }
-                            } else null
+                            } else null,
+                            onAddToDictionary = null
                         )
                     }
                 }
@@ -438,13 +464,15 @@ fun ListDetailScreen(
 private fun SwipeableEntryRow(
     entry: ListEntrySummary,
     checked: Boolean,
+    dragHandleModifier: Modifier?,
     lw: (String) -> String,
     onToggleChecked: (Long, Boolean) -> Unit,
     onEdit: () -> Unit,
     onRequestDelete: () -> Unit,
     onAddPhoto: () -> Unit,
     onViewPhotos: (() -> Unit)?,
-    onRemovePhotos: (() -> Unit)?
+    onRemovePhotos: (() -> Unit)?,
+    onAddToDictionary: (() -> Unit)?
 ) {
     val palette = LocalAppThemePalette.current
     @Suppress("DEPRECATION")
@@ -502,8 +530,11 @@ private fun SwipeableEntryRow(
             ListEntryCard(
                 entry = entry,
                 checked = checked,
+                lw = lw,
                 onToggleChecked = onToggleChecked,
-                onPhotoTap = onViewPhotos
+                onPhotoTap = onViewPhotos,
+                onAddToDictionary = onAddToDictionary,
+                dragHandleModifier = dragHandleModifier
             )
             DropdownMenu(
                 expanded = contextMenuExpanded,
@@ -549,8 +580,11 @@ private fun SwipeableEntryRow(
 private fun ListEntryCard(
     entry: ListEntrySummary,
     checked: Boolean,
+    lw: (String) -> String,
     onToggleChecked: (Long, Boolean) -> Unit,
-    onPhotoTap: (() -> Unit)? = null
+    onPhotoTap: (() -> Unit)? = null,
+    onAddToDictionary: (() -> Unit)? = null,
+    dragHandleModifier: Modifier? = null
 ) {
     val palette = LocalAppThemePalette.current
     Card(
@@ -560,8 +594,8 @@ private fun ListEntryCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
@@ -608,6 +642,27 @@ private fun ListEntryCard(
                         text = entry.photoCount.toString(),
                         color = palette.clText,
                         fontSize = UiTokens.fsNormal
+                    )
+                }
+            }
+            if (onAddToDictionary != null) {
+                IconButton(onClick = onAddToDictionary) {
+                    Icon(
+                        imageVector = Icons.Default.BookmarkAdd,
+                        contentDescription = lw("Add to dictionary"),
+                        tint = palette.clText
+                    )
+                }
+            }
+            if (dragHandleModifier != null) {
+                Box(
+                    modifier = dragHandleModifier.padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DragHandle,
+                        contentDescription = lw("Reorder"),
+                        tint = palette.clText
                     )
                 }
             }

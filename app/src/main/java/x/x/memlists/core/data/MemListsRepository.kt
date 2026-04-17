@@ -549,17 +549,100 @@ class MemListsRepository(
         }
 
         val photoCounts = loadEntryPhotoCountsBulk(allEntries.map { it.id })
-        val withPhotos = allEntries.map { entry ->
-            entry.copy(photoCount = photoCounts[entry.id] ?: 0)
+        val dictNames = loadDictionaryLowerNames()
+        val enriched = allEntries.map { entry ->
+            entry.copy(
+                photoCount = photoCounts[entry.id] ?: 0,
+                isInDictionary = entry.name.trim().lowercase() in dictNames
+            )
         }
 
         ListDetailData(
             listId = listId,
             name = listRow.first,
             comment = listRow.second,
-            uncheckedEntries = withPhotos.filter { !it.isChecked },
-            checkedEntries = withPhotos.filter { it.isChecked }
+            uncheckedEntries = enriched.filter { !it.isChecked },
+            checkedEntries = enriched.filter { it.isChecked }
         )
+    }
+
+    private fun loadDictionaryLowerNames(): Set<String> {
+        val set = HashSet<String>()
+        databaseHelper.readableDatabase.query(
+            "dictionary", arrayOf("name"), null, null, null, null, null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                set += cursor.getString(0).trim().lowercase()
+            }
+        }
+        return set
+    }
+
+    suspend fun searchDictionary(query: String, limit: Int = 20): List<DictionaryItem> = withContext(Dispatchers.IO) {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return@withContext emptyList()
+        val pattern = "%${trimmed.replace("%", "\\%").replace("_", "\\_")}%"
+        val result = mutableListOf<DictionaryItem>()
+        databaseHelper.readableDatabase.rawQuery(
+            "SELECT id, name, unit FROM dictionary WHERE name LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE ASC LIMIT ?",
+            arrayOf(pattern, limit.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result += DictionaryItem(
+                    id = cursor.getLong(0),
+                    name = cursor.getString(1),
+                    unit = cursor.getStringOrNull(2)
+                )
+            }
+        }
+        result
+    }
+
+    suspend fun findDictionaryByName(name: String): DictionaryItem? = withContext(Dispatchers.IO) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return@withContext null
+        databaseHelper.readableDatabase.rawQuery(
+            "SELECT id, name, unit FROM dictionary WHERE LOWER(name) = LOWER(?) LIMIT 1",
+            arrayOf(trimmed)
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                DictionaryItem(
+                    id = cursor.getLong(0),
+                    name = cursor.getString(1),
+                    unit = cursor.getStringOrNull(2)
+                )
+            } else null
+        }
+    }
+
+    suspend fun insertDictionary(name: String, unit: String?): Long = withContext(Dispatchers.IO) {
+        val sortOrder = databaseHelper.readableDatabase.compileStatement(
+            "SELECT COALESCE(MAX(sort_order), 0) FROM dictionary"
+        ).simpleQueryForLong().toInt() + 1
+        val values = ContentValues().apply {
+            put("name", name)
+            if (unit.isNullOrBlank()) putNull("unit") else put("unit", unit)
+            put("sort_order", sortOrder)
+        }
+        databaseHelper.writableDatabase.insertOrThrow("dictionary", null, values)
+    }
+
+    suspend fun reorderEntries(listId: Long, orderedIds: List<Long>) = withContext(Dispatchers.IO) {
+        val db = databaseHelper.writableDatabase
+        db.beginTransaction()
+        try {
+            orderedIds.forEachIndexed { index, entryId ->
+                val values = ContentValues().apply { put("sort_order", index + 1) }
+                db.update(
+                    "entries", values,
+                    "id = ? AND list_id = ?",
+                    arrayOf(entryId.toString(), listId.toString())
+                )
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 
     suspend fun insertListEntry(

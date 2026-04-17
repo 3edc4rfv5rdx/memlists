@@ -3,15 +3,19 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
-- N Lists: photo gallery in entry editor (camera/gallery pick, viewer, delete)
-- N Lists: photo count badge (icon + number) on list entries
-- N Lists: photo actions in long-press menu (add/view/remove)
-- E Lists: delete entry/list asks to move photos to gallery or delete permanently
+- N Lists: drag-handle reorder for unchecked entries (sort_order persisted)
+- N Lists: per-entry "Add to dictionary" button shown when name not in dictionary
+- N Lists: live dictionary search dropdown in entry editor name field
+- I Add sh.calvin.reorderable 2.4.3 for LazyColumn drag-and-drop
 - E Memos: delete memo with photos asks to move to gallery or delete permanently
-- F Photo delete dialogs: all buttons use filled Button style per spec
-- F Lists: tap on photo badge opens viewer, tap on row no longer opens editor
-- F All dropdown menus use palette.clMenu for consistent theming
 - F Lists: green/red snackbar on save success/failure in editors
+- F All dropdown menus use palette.clMenu for consistent theming
+- F Lists: tap on photo badge opens viewer, tap on row no longer opens editor
+- F Photo delete dialogs: all buttons use filled Button style per spec
+- E Lists: delete entry/list asks to move photos to gallery or delete permanently
+- N Lists: photo actions in long-press menu (add/view/remove)
+- N Lists: photo count badge (icon + number) on list entries
+- N Lists: photo gallery in entry editor (camera/gallery pick, viewer, delete)
 
 ## v0.2.20260416+178
 - F MemoEditor: show Saved snackbar on first save too, not only on edits

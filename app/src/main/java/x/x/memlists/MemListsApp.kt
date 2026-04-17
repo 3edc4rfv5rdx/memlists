@@ -575,7 +575,9 @@ fun MemListsApp() {
                             }
                         }
                     },
-                    onPhotosChanged = { detailViewModel.load(listId) }
+                    onPhotosChanged = { detailViewModel.load(listId) },
+                    onReorderEntries = detailViewModel::moveEntry,
+                    onAddToDictionary = detailViewModel::addEntryToDictionary
                 )
 
                 pendingDeleteEntryId?.let { entryId ->

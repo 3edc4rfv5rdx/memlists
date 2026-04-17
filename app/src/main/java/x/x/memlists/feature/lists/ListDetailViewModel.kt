@@ -40,4 +40,28 @@ class ListDetailViewModel(
             load(_uiState.value.listId)
         }
     }
+
+    fun moveEntry(fromIndex: Int, toIndex: Int) {
+        val current = _uiState.value.uncheckedEntries
+        if (fromIndex !in current.indices || toIndex !in current.indices || fromIndex == toIndex) return
+        val reordered = current.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
+        _uiState.update { it.copy(uncheckedEntries = reordered) }
+        viewModelScope.launch {
+            repository.reorderEntries(_uiState.value.listId, reordered.map { it.id })
+        }
+    }
+
+    fun addEntryToDictionary(entryId: Long) {
+        val entry = (_uiState.value.uncheckedEntries + _uiState.value.checkedEntries)
+            .firstOrNull { it.id == entryId } ?: return
+        val normalized = entry.name.trim().lowercase()
+            .replaceFirstChar { it.titlecase() }
+        if (normalized.isEmpty()) return
+        viewModelScope.launch {
+            if (repository.findDictionaryByName(normalized) == null) {
+                repository.insertDictionary(normalized, entry.unit)
+            }
+            load(_uiState.value.listId)
+        }
+    }
 }
