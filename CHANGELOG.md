@@ -3,6 +3,9 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure, T=tag
 
 ## Unreleased
+- F Settings: Items dictionary moved to 3rd row (after Language, Theme); ActionRowCard shows ">" trailing, padding matches DropdownCard
+- N Dictionary editor: swipe right → edit, swipe left → delete; bullet icon at row start
+- F Dictionary edit dialog: disable system dim, keep only 30% scrim so snackbar shows through
 - F Lists: green snackbar on add to dictionary (editor + entry button)
 - E Lists: red snackbar on dictionary save/delete failure
 - F Dictionary edit dialog: 30% scrim so snackbar is visible behind

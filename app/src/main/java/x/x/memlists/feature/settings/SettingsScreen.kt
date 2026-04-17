@@ -178,6 +178,12 @@ fun SettingsScreen(
                 palette = palette
             )
 
+            ActionRowCard(
+                label = lw("Items dictionary"),
+                palette = palette,
+                onClick = onOpenDictionary
+            )
+
             SettingSwitchCard(
                 title = lw("Newest first"),
                 body = lw("Sort preference"),
@@ -195,11 +201,6 @@ fun SettingsScreen(
                 body = lw("Theme applied immediately"),
                 checked = settings.largeFontWakeLock,
                 onCheckedChange = onLargeFontWakeLockChanged
-            )
-            ActionRowCard(
-                label = lw("Items dictionary"),
-                palette = palette,
-                onClick = onOpenDictionary
             )
 
             SectionTitle(title = lw("Time presets"))
@@ -413,10 +414,16 @@ private fun ActionRowCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = label,
+                fontSize = UiTokens.fsNormal,
+                color = palette.clText
+            )
+            Text(
+                text = ">",
                 fontSize = UiTokens.fsNormal,
                 color = palette.clText
             )
